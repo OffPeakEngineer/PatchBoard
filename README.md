@@ -60,8 +60,8 @@ If Patchboard is checked out as a submodule, target the parent repo explicitly:
 
 ```bash
 go -C patchboard run ./cmd/patchboard init ..
-go -C patchboard run ./cmd/patchboard lint
-go -C patchboard run ./cmd/patchboard todos
+go -C patchboard run ./cmd/patchboard lint ..
+go -C patchboard run ./cmd/patchboard todos ..
 ```
 
 ## Task Files

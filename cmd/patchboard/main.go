@@ -15,10 +15,7 @@ func main() {
 
 	switch os.Args[1] {
 	case "init":
-		root := "."
-		if len(os.Args) > 2 {
-			root = os.Args[2]
-		}
+		root := repoRootArg()
 		result, err := tasks.Init(root)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
@@ -29,7 +26,7 @@ func main() {
 			fmt.Printf("Created %d paths\n", len(result.Created))
 		}
 	case "lint":
-		result, err := tasks.Lint(".")
+		result, err := tasks.Lint(repoRootArg())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
 			os.Exit(2)
@@ -43,7 +40,7 @@ func main() {
 			os.Exit(1)
 		}
 	case "todos":
-		result, err := tasks.Lint(".")
+		result, err := tasks.Lint(repoRootArg())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
 			os.Exit(2)
@@ -60,6 +57,13 @@ func main() {
 	}
 }
 
+func repoRootArg() string {
+	if len(os.Args) > 2 {
+		return os.Args[2]
+	}
+	return "."
+}
+
 func usage() {
-	fmt.Fprintln(os.Stderr, "Usage: patchboard <init [repo-root]|lint|todos>")
+	fmt.Fprintln(os.Stderr, "Usage: patchboard <init|lint|todos> [repo-root]")
 }
