@@ -22,6 +22,10 @@ func Scan(repoRoot string, cfg Config) ([]Task, []Annotation, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	return scanRoot(repoRoot, cfg)
+}
+
+func scanRoot(repoRoot string, cfg Config) ([]Task, []Annotation, error) {
 	taskRoot := filepath.Join(repoRoot, cfg.TaskRoot)
 
 	taskList, err := scanTasks(taskRoot, cfg)

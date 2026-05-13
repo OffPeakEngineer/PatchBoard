@@ -17,9 +17,9 @@ Patchboard is early. The current useful pieces are:
 
 Planned but not built yet:
 
-- config file support
 - JSON output
-- task creation and movement commands
+- task movement commands
+- lint follow-up task generation
 - a local web UI
 
 ## Quick Start
@@ -182,9 +182,65 @@ Unlinked annotations are listed by `patchboard todos`, but they do not fail
 - `TASK002`: duplicate task ID
 - `TASK003`: missing title
 - `TASK004`: frontmatter `status` does not match the folder
+- `TASK005`: filename does not match the configured filename pattern
 - `TODO001`: code annotation references a missing task
 - `TODO002`: code annotation references a done or archived task
 - `TODO003`: duplicate annotation task ID in code
+
+## Configuration
+
+Patchboard works without configuration. Repos can opt into local conventions
+with `.patchboard.yaml`, `.patchboard.yml`, or `.patchboard.json` at the repo
+root. YAML is nice for project-owned repos because it is comment-friendly:
+
+```yaml
+task_root: tasks
+states:
+  - backlog
+  - ready
+  - doing
+  - blocked
+  - done
+  - archived
+done_states:
+  - done
+  - archived
+filename:
+  enabled: true
+  pattern: "^[^-]+--p[0-9]+--[a-z0-9]+(?:-[a-z0-9]+)*\\.md$"
+  description: "<type>--pN--slug.md"
+  severity: warning
+```
+
+JSON is also supported for projects that prefer it:
+
+```json
+{
+  "task_root": "tasks",
+  "states": ["backlog", "ready", "doing", "blocked", "done", "archived"],
+  "done_states": ["done", "archived"],
+  "filename": {
+    "enabled": true,
+    "pattern": "^[^-]+--p[0-9]+--[a-z0-9]+(?:-[a-z0-9]+)*\\.md$",
+    "description": "<type>--pN--slug.md",
+    "severity": "warning"
+  }
+}
+```
+
+Use filename lint as a kindness, not a trap. A project manager who only lives
+inside `tasks/` should get a clear message such as
+"filename should match <type>--pN--slug.md", not a Go-shaped stack of nonsense.
+Set `"severity":
+"error"` only when the team wants CI or hooks to enforce the naming convention.
+
+Creation dates, task identity, and richer metadata should live in frontmatter.
+Filename conventions are for quick scanning, not as a replacement for the task
+record itself.
+
+Future follow-up generation should be explicit, for example a command that turns
+lint findings into backlog task files on request. `patchboard lint` should not
+silently mutate the repo.
 
 Exit codes:
 

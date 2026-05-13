@@ -119,6 +119,61 @@ status: doing
 	}
 }
 
+func TestLintCanWarnAboutConfiguredFilenamePattern(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, ".patchboard.yaml", `
+filename:
+  enabled: true
+  pattern: "^\\d{4}-\\d{2}-\\d{2}-[a-z0-9]+(?:-[a-z0-9]+)*\\.md$"
+  description: YYYY-MM-DD-slug.md
+  severity: warning
+`)
+	writeFile(t, root, "tasks/ready/nice-human-note.md", `---
+id: task-filename
+title: Filename note
+status: ready
+---
+`)
+
+	result, err := Lint(root)
+	if err != nil {
+		t.Fatalf("Lint returned error: %v", err)
+	}
+	if !hasIssue(result, "TASK005") {
+		t.Fatalf("expected TASK005, got %#v", result.Issues)
+	}
+	if result.HasErrors() {
+		t.Fatalf("expected filename warning not to fail lint, got %#v", result.Issues)
+	}
+}
+
+func TestLintCanLoadJsonConfig(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, ".patchboard.json", `{
+  "filename": {
+    "enabled": true,
+    "pattern": "^ticket-[a-z0-9-]+\\.md$",
+    "description": "ticket-slug.md",
+    "severity": "warning"
+  }
+}
+`)
+	writeFile(t, root, "tasks/ready/human-note.md", `---
+id: task-json-config
+title: JSON config
+status: ready
+---
+`)
+
+	result, err := Lint(root)
+	if err != nil {
+		t.Fatalf("Lint returned error: %v", err)
+	}
+	if !hasIssue(result, "TASK005") {
+		t.Fatalf("expected TASK005, got %#v", result.Issues)
+	}
+}
+
 func TestInitCreatesDefaultTaskBoardWithoutOverwriting(t *testing.T) {
 	root := t.TempDir()
 

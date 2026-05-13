@@ -25,8 +25,7 @@ type CreateResult struct {
 }
 
 func Create(repoRoot string, opts CreateOptions) (CreateResult, error) {
-	cfg := DefaultConfig()
-	root, err := resolveRepoRoot(repoRoot, cfg)
+	root, cfg, err := LoadConfig(repoRoot)
 	if err != nil {
 		return CreateResult{}, err
 	}

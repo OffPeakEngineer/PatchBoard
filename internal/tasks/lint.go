@@ -2,6 +2,8 @@ package tasks
 
 import (
 	"fmt"
+	"path/filepath"
+	"regexp"
 	"slices"
 )
 
@@ -9,8 +11,11 @@ import (
 // discovered tasks, annotations, and lint issues. The CLI decides how to print
 // this result and which exit code to use.
 func Lint(repoRoot string) (Result, error) {
-	cfg := DefaultConfig()
-	taskList, todoList, err := Scan(repoRoot, cfg)
+	root, cfg, err := LoadConfig(repoRoot)
+	if err != nil {
+		return Result{}, err
+	}
+	taskList, todoList, err := scanRoot(root, cfg)
 	if err != nil {
 		return Result{}, err
 	}
@@ -63,6 +68,25 @@ func lintTasks(taskList []Task, cfg Config) []Issue {
 				Path:     task.Path,
 				Message:  fmt.Sprintf("status mismatch: file is in %q but frontmatter says %q", task.State, task.FrontmatterStat),
 			})
+		}
+
+		if cfg.Filename.Enabled && cfg.Filename.Pattern != "" {
+			pattern, err := regexp.Compile(cfg.Filename.Pattern)
+			if err != nil {
+				issues = append(issues, Issue{
+					Severity: "error",
+					Code:     "TASK005",
+					Path:     task.Path,
+					Message:  fmt.Sprintf("filename rule pattern is invalid: %v", err),
+				})
+			} else if !pattern.MatchString(filepath.Base(task.Path)) {
+				issues = append(issues, Issue{
+					Severity: cfg.Filename.Severity,
+					Code:     "TASK005",
+					Path:     task.Path,
+					Message:  fmt.Sprintf("filename should match %s", cfg.Filename.Description),
+				})
+			}
 		}
 	}
 
