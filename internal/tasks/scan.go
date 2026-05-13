@@ -108,6 +108,9 @@ func scanTodos(repoRoot string, cfg Config) ([]Annotation, error) {
 			if rel == "." {
 				return nil
 			}
+			if isNestedRepo(path, rel) {
+				return filepath.SkipDir
+			}
 			if slices.Contains(cfg.IgnoreDirs, name) || rel == cfg.TaskRoot {
 				return filepath.SkipDir
 			}
@@ -129,6 +132,16 @@ func scanTodos(repoRoot string, cfg Config) ([]Annotation, error) {
 		return nil
 	})
 	return refs, err
+}
+
+func isNestedRepo(path, rel string) bool {
+	if rel == "." {
+		return false
+	}
+	if _, err := os.Stat(filepath.Join(path, ".git")); err == nil {
+		return true
+	}
+	return false
 }
 
 func scanFileTodos(path string, pattern *regexp.Regexp) ([]Annotation, error) {

@@ -11,6 +11,7 @@ readable and meaningful if the binary disappears.
 Patchboard is early. The current useful pieces are:
 
 - `patchboard init`: create the default task board folders
+- `patchboard create`: create a task file from command-line fields
 - `patchboard lint`: validate task files and linked code annotations
 - `patchboard todos`: list code annotations found across the repo
 
@@ -45,6 +46,7 @@ tasks/
 Then run:
 
 ```bash
+patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling"
 patchboard lint
 patchboard todos
 ```
@@ -53,6 +55,7 @@ During development, you can run the tool without installing it:
 
 ```bash
 go run ./cmd/patchboard init
+go run ./cmd/patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling"
 go run ./cmd/patchboard lint
 ```
 
@@ -60,6 +63,7 @@ If Patchboard is checked out as a submodule, target the parent repo explicitly:
 
 ```bash
 go -C patchboard run ./cmd/patchboard init ..
+go -C patchboard run ./cmd/patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling" ..
 go -C patchboard run ./cmd/patchboard lint ..
 go -C patchboard run ./cmd/patchboard todos ..
 ```

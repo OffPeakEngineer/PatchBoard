@@ -96,6 +96,29 @@ status: doing
 	}
 }
 
+func TestLintIgnoresNestedGitCheckouts(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "tasks/doing/root-task.md", `---
+id: task-root
+title: Root task
+status: doing
+---
+`)
+	writeFile(t, root, "nested/.git", "gitdir: ../.git/modules/nested\n")
+	writeFile(t, root, "nested/src/file.go", `package src
+
+// TODO[missing-nested-task]: this belongs to the nested checkout
+`)
+
+	result, err := Lint(root)
+	if err != nil {
+		t.Fatalf("Lint returned error: %v", err)
+	}
+	if result.HasErrors() {
+		t.Fatalf("expected nested checkout to be ignored, got %#v", result.Issues)
+	}
+}
+
 func TestInitCreatesDefaultTaskBoardWithoutOverwriting(t *testing.T) {
 	root := t.TempDir()
 
