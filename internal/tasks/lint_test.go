@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestLintDetectsTaskAndTodoIssues(t *testing.T) {
@@ -107,7 +108,7 @@ status: doing
 	writeFile(t, root, "nested/.git", "gitdir: ../.git/modules/nested\n")
 	writeFile(t, root, "nested/src/file.go", `package src
 
-// TODO[missing-nested-task]: this belongs to the nested checkout
+// `+todoRef("missing-nested-task")+`: this belongs to the nested checkout
 `)
 
 	result, err := Lint(root)
@@ -207,6 +208,29 @@ func TestInitCreatesDefaultTaskBoardWithoutOverwriting(t *testing.T) {
 	}
 	if string(body) != "custom docs\n" {
 		t.Fatalf("init overwrote README: %q", string(body))
+	}
+}
+
+func TestCreateDefaultsToFirstConfiguredState(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, ".patchboard.yaml", `
+states:
+  - 0_backlog
+  - 1_ready
+  - 2_doing
+done_states:
+  - 2_doing
+`)
+
+	result, err := Create(root, CreateOptions{
+		Title: "Default state task",
+		Now:   time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+	if result.Path != "tasks/0_backlog/2026-05-17-default-state-task.md" {
+		t.Fatalf("unexpected path: %s", result.Path)
 	}
 }
 

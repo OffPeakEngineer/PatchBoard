@@ -31,6 +31,11 @@ func Create(repoRoot string, opts CreateOptions) (CreateResult, error) {
 	}
 
 	if !contains(cfg.States, opts.State) {
+		if opts.State == "" && len(cfg.States) > 0 {
+			opts.State = cfg.States[0]
+		}
+	}
+	if !contains(cfg.States, opts.State) {
 		return CreateResult{}, fmt.Errorf("unknown task state %q", opts.State)
 	}
 	if opts.Title == "" {

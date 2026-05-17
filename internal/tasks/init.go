@@ -23,6 +23,12 @@ func Init(repoRoot string) (InitResult, error) {
 	if err != nil {
 		return InitResult{}, err
 	}
+	if loadedRoot, loadedCfg, err := LoadConfig(root); err == nil {
+		root = loadedRoot
+		cfg = loadedCfg
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return InitResult{}, err
+	}
 
 	result := InitResult{TaskRoot: filepath.ToSlash(filepath.Join(root, cfg.TaskRoot))}
 	taskRoot := filepath.Join(root, cfg.TaskRoot)
@@ -42,7 +48,7 @@ func Init(repoRoot string) (InitResult, error) {
 	}
 
 	readme := filepath.Join(taskRoot, "README.md")
-	if err := writeFileIfMissing(readme, taskReadme(), &result); err != nil {
+	if err := writeFileIfMissing(readme, taskReadme(cfg), &result); err != nil {
 		return InitResult{}, err
 	}
 
@@ -82,8 +88,7 @@ func writeFileIfMissing(path, content string, result *InitResult) error {
 	return nil
 }
 
-func taskReadme() string {
-	cfg := DefaultConfig()
+func taskReadme(cfg Config) string {
 	var states strings.Builder
 	for _, state := range cfg.States {
 		fmt.Fprintf(&states, "- `%s/`\n", state)

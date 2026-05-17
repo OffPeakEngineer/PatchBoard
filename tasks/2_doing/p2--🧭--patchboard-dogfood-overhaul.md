@@ -1,5 +1,6 @@
 ---
 id: task-20260513-patchboard-dogfood-overhaul
+title: Patchboard dogfood overhaul
 owner: andy
 tags:
   - patchboard
