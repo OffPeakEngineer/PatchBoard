@@ -1,0 +1,110 @@
+project_name: patchboard
+builds:
+  - id: patchboard
+    dir: ./cmd/patchboard
+    binary: patchboard
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    goarm:
+      - 6
+    ldflags:
+      - -s -w
+  - id: patchboard-musl
+    dir: ./cmd/patchboard
+    binary: patchboard
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm
+    goarm:
+      - 7
+    ldflags:
+      - -s -w
+
+archives:
+  - format: tar.gz
+    files:
+      - LICENSE
+    replacements:
+      darwin: macOS
+      amd64: x86_64
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - format: zip
+    files:
+      - LICENSE
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  use: git
+
+release:
+  github:
+    name_template: "v{{ .Version }}"
+
+# Package publishers
+brews:
+  - name: patchboard
+    tap:
+      owner: ledoerr
+      name: homebrew-tap
+    folder: Formula
+    commit_author:
+      name: goreleaser
+      email: goreleaser@example.com
+
+chocolateys:
+  - name: patchboard
+    package_template: "{{ .ProjectName }}"
+    commit_author:
+      name: goreleaser
+      email: goreleaser@example.com
+
+scoops:
+  - name: patchboard
+    bucket: ledoerr/scoop-bucket
+    folder: bucket
+
+aur:
+  name: patchboard
+  user: ledoerr
+
+nfpm:
+  - id: default
+    formats: [deb, rpm]
+    package: patchboard
+    maintainer: "Your Name <you@example.com>"
+    files:
+      - src: build/patchboard
+        dst: /usr/local/bin/patchboard
+    description: "Patchboard CLI"
+    license: MIT
+
+snaps:
+  - name: patchboard
+    summary: "Patchboard CLI"
+    publisher: ledoerr
+
+winget:
+  name: patchboard
+  repo: ledoerr/winget-pkgs
+
+nix:
+  - name: patchboard
+    repo: ledoerr/nixpkgs
+
+# Notes:
+# - Replace placeholders like YOUR_GITHUB_USER, YOUR_AUR_USER, and YOUR_SNAP_PUBLISHER.
+# - Add the required secrets to the repository (AUR token, SNAPCRAFT token, etc.).
