@@ -1,0 +1,26 @@
+name: Prepare Release (conventional commits)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: create
+        name: Create release PR / tag (release-please)
+        uses: google-github-actions/release-please-action@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: go
+          package-name: patchboard
+          bump-minor-pre-major: true
+      - name: Enable auto-merge for release PR
+        if: steps.create.outputs.pull_request_number != ''
+        uses: peter-evans/enable-pull-request-automerge@v2
+        with:
+          pull-request-number: ${{ steps.create.outputs.pull_request_number }}
+          merge-method: squash
+          token: ${{ secrets.GITHUB_TOKEN }}
