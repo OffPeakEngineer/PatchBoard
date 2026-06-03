@@ -1,0 +1,16 @@
+# Go binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Go test cache
+.testcache
+
+# Output of go coverage tool
+*.out
+
+# Go workspace file
+go.work
