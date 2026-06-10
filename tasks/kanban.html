@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Patchboard</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f7f7f4;
+      --panel: #ffffff;
+      --panel-2: #f0f3f6;
+      --text: #1f252b;
+      --muted: #68727d;
+      --line: #d9dee3;
+      --accent: #167568;
+      --danger: #b23b3b;
+      --shadow: 0 1px 3px rgb(18 25 33 / 0.12);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #171a1d;
+        --panel: #22272c;
+        --panel-2: #1c2024;
+        --text: #eef1f3;
+        --muted: #a5aeb7;
+        --line: #37404a;
+        --accent: #5bc2b3;
+        --danger: #f07f7f;
+        --shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 650;
+      letter-spacing: 0;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    button, select {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      font: inherit;
+    }
+
+    button {
+      padding: 0 12px;
+      cursor: pointer;
+    }
+
+    button.primary {
+      border-color: color-mix(in srgb, var(--accent), #000 10%);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    select { padding: 0 8px; }
+
+    #status {
+      min-height: 24px;
+      padding: 8px 18px;
+      color: var(--muted);
+    }
+
+    #status.error { color: var(--danger); }
+
+    main {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(260px, 1fr);
+      gap: 12px;
+      align-items: start;
+      min-height: calc(100vh - 101px);
+      overflow-x: auto;
+      padding: 0 18px 18px;
+    }
+
+    .lane {
+      min-height: 240px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      overflow: hidden;
+    }
+
+    .lane.over { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .lane-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+      font-weight: 650;
+    }
+
+    .count {
+      min-width: 24px;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: var(--panel-2);
+      color: var(--muted);
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .cards {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      min-height: 180px;
+    }
+
+    .card {
+      display: grid;
+      gap: 6px;
+      min-height: 78px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      cursor: grab;
+    }
+
+    .card:active { cursor: grabbing; }
+
+    .title {
+      overflow-wrap: anywhere;
+      font-weight: 620;
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .empty {
+      padding: 12px;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 data-i18n="appTitle">Patchboard</h1>
+    <div class="toolbar">
+      <select id="language" aria-label="Language"></select>
+      <button id="open" class="primary" data-i18n="openFolder">Open tasks folder</button>
+      <button id="refresh" data-i18n="refresh">Refresh</button>
+    </div>
+  </header>
+  <div id="status" data-i18n="chooseFolder">Choose this project's tasks folder to load the board.</div>
+  <main id="board" aria-live="polite"></main>
+
+  <script>
+    const messages = {
+      en: {
+        appTitle: "Patchboard",
+        openFolder: "Open tasks folder",
+        refresh: "Refresh",
+        chooseFolder: "Choose this project's tasks folder to load the board.",
+        unsupported: "This browser cannot write to local folders from a page. Use Chrome or Edge for drag-and-drop moves.",
+        loaded: "Board loaded.",
+        moved: "Moved card.",
+        moveFailed: "Move failed. Check browser permissions and try again.",
+        noTasks: "No tasks",
+        noStates: "No state folders found.",
+        cardId: "ID",
+        file: "File"
+      },
+      es: {
+        appTitle: "Patchboard",
+        openFolder: "Abrir carpeta de tareas",
+        refresh: "Actualizar",
+        chooseFolder: "Elige la carpeta de tareas de este proyecto para cargar el tablero.",
+        unsupported: "Este navegador no puede escribir carpetas locales desde una pagina. Usa Chrome o Edge para mover tarjetas.",
+        loaded: "Tablero cargado.",
+        moved: "Tarjeta movida.",
+        moveFailed: "No se pudo mover. Revisa los permisos del navegador e intenta de nuevo.",
+        noTasks: "Sin tareas",
+        noStates: "No se encontraron carpetas de estado.",
+        cardId: "ID",
+        file: "Archivo"
+      }
+    };
+
+    let lang = pickLanguage();
+    let rootHandle = null;
+    let board = { states: [], tasks: [] };
+    let draggedPath = "";
+
+    const boardEl = document.querySelector("#board");
+    const statusEl = document.querySelector("#status");
+    const languageEl = document.querySelector("#language");
+
+    initLanguage();
+    document.querySelector("#open").addEventListener("click", openFolder);
+    document.querySelector("#refresh").addEventListener("click", refresh);
+
+    if (!("showDirectoryPicker" in window)) {
+      setStatus(t("unsupported"), true);
+    }
+
+    function pickLanguage() {
+      const saved = localStorage.getItem("patchboard.language");
+      if (saved && messages[saved]) return saved;
+      for (const value of navigator.languages || [navigator.language]) {
+        const code = String(value || "").toLowerCase().split("-")[0];
+        if (messages[code]) return code;
+      }
+      return "en";
+    }
+
+    function initLanguage() {
+      for (const code of Object.keys(messages)) {
+        const option = document.createElement("option");
+        option.value = code;
+        option.textContent = code.toUpperCase();
+        languageEl.append(option);
+      }
+      languageEl.value = lang;
+      languageEl.addEventListener("change", () => {
+        lang = languageEl.value;
+        localStorage.setItem("patchboard.language", lang);
+        translate();
+        render();
+      });
+      translate();
+    }
+
+    function translate() {
+      document.documentElement.lang = lang;
+      for (const el of document.querySelectorAll("[data-i18n]")) {
+        el.textContent = t(el.dataset.i18n);
+      }
+    }
+
+    function t(key) {
+      return (messages[lang] && messages[lang][key]) || messages.en[key] || key;
+    }
+
+    async function openFolder() {
+      if (!("showDirectoryPicker" in window)) {
+        setStatus(t("unsupported"), true);
+        return;
+      }
+      rootHandle = await window.showDirectoryPicker({ id: "patchboard-tasks", mode: "readwrite" });
+      await refresh();
+    }
+
+    async function refresh() {
+      if (!rootHandle) {
+        setStatus(t("chooseFolder"));
+        return;
+      }
+      board = await readBoard(rootHandle);
+      render();
+      setStatus(t("loaded"));
+    }
+
+    async function readBoard(handle) {
+      const entries = [];
+      for await (const [name, child] of handle.entries()) {
+        entries.push([name, child]);
+      }
+
+      const configuredStates = await readConfiguredStates(handle);
+      const dirs = entries
+        .filter(([name, child]) => child.kind === "directory" && !name.startsWith("."))
+        .map(([name]) => name);
+      const states = configuredStates.length ? configuredStates.filter((state) => dirs.includes(state)) : dirs.sort();
+      const tasks = [];
+
+      for (const state of states) {
+        const dir = await handle.getDirectoryHandle(state);
+        for await (const [name, child] of dir.entries()) {
+          if (child.kind !== "file" || !name.endsWith(".md") || name.startsWith(".")) continue;
+          const file = await child.getFile();
+          const text = await file.text();
+          tasks.push(parseTask(state, name, text));
+        }
+      }
+      return { states, tasks };
+    }
+
+    async function readConfiguredStates(handle) {
+      for (const name of ["board.yml", "board.yaml"]) {
+        try {
+          const file = await (await handle.getFileHandle(name)).getFile();
+          return parseStates(await file.text());
+        } catch (_) {}
+      }
+      return [];
+    }
+
+    function parseStates(text) {
+      const states = [];
+      let inStates = false;
+      for (const line of text.split(/\r?\n/)) {
+        if (/^\s*states:\s*$/.test(line)) {
+          inStates = true;
+          continue;
+        }
+        if (inStates && /^\S/.test(line)) break;
+        const match = line.match(/^\s*-\s+(.+?)\s*$/);
+        if (inStates && match) states.push(match[1].replace(/^["']|["']$/g, ""));
+      }
+      return states;
+    }
+
+    function parseTask(state, file, text) {
+      const slug = file.replace(/\.md$/, "");
+      const title = firstHeading(text) || frontmatter(text, "title") || slug.replaceAll("-", " ");
+      return {
+        id: frontmatter(text, "id") || slug,
+        title,
+        state,
+        file,
+        path: `${state}/${file}`
+      };
+    }
+
+    function firstHeading(text) {
+      const line = text.split(/\r?\n/).find((value) => value.startsWith("# "));
+      return line ? line.replace(/^#\s+/, "").trim() : "";
+    }
+
+    function frontmatter(text, key) {
+      if (!text.startsWith("---\n")) return "";
+      const end = text.indexOf("\n---", 4);
+      if (end < 0) return "";
+      const pattern = new RegExp(`^${key}:\\s*(.+)$`, "m");
+      const match = text.slice(4, end).match(pattern);
+      return match ? match[1].trim().replace(/^["']|["']$/g, "") : "";
+    }
+
+    function render() {
+      boardEl.replaceChildren();
+      if (!board.states.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = t("noStates");
+        boardEl.append(empty);
+        return;
+      }
+
+      for (const state of board.states) {
+        const lane = document.createElement("section");
+        lane.className = "lane";
+        lane.dataset.state = state;
+        lane.addEventListener("dragover", onDragOver);
+        lane.addEventListener("dragleave", () => lane.classList.remove("over"));
+        lane.addEventListener("drop", onDrop);
+
+        const laneTasks = board.tasks.filter((task) => task.state === state).sort((a, b) => a.title.localeCompare(b.title));
+        lane.append(laneHeader(state, laneTasks.length));
+        const cards = document.createElement("div");
+        cards.className = "cards";
+        if (!laneTasks.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.textContent = t("noTasks");
+          cards.append(empty);
+        }
+        for (const task of laneTasks) cards.append(card(task));
+        lane.append(cards);
+        boardEl.append(lane);
+      }
+    }
+
+    function laneHeader(state, count) {
+      const header = document.createElement("div");
+      header.className = "lane-header";
+      const name = document.createElement("span");
+      name.textContent = state;
+      const badge = document.createElement("span");
+      badge.className = "count";
+      badge.textContent = count;
+      header.append(name, badge);
+      return header;
+    }
+
+    function card(task) {
+      const el = document.createElement("article");
+      el.className = "card";
+      el.draggable = true;
+      el.dataset.path = task.path;
+      el.addEventListener("dragstart", () => {
+        draggedPath = task.path;
+      });
+
+      const title = document.createElement("div");
+      title.className = "title";
+      title.textContent = task.title;
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.append(metaItem(t("cardId"), task.id), metaItem(t("file"), task.file));
+      el.append(title, meta);
+      return el;
+    }
+
+    function metaItem(label, value) {
+      const el = document.createElement("span");
+      el.textContent = `${label}: ${value}`;
+      return el;
+    }
+
+    function onDragOver(event) {
+      event.preventDefault();
+      event.currentTarget.classList.add("over");
+    }
+
+    async function onDrop(event) {
+      event.preventDefault();
+      const lane = event.currentTarget;
+      lane.classList.remove("over");
+      const targetState = lane.dataset.state;
+      const task = board.tasks.find((candidate) => candidate.path === draggedPath);
+      if (!task || task.state === targetState) return;
+
+      try {
+        await moveTask(task, targetState);
+        setStatus(t("moved"));
+        await refresh();
+      } catch (error) {
+        console.error(error);
+        setStatus(t("moveFailed"), true);
+      }
+    }
+
+    async function moveTask(task, targetState) {
+      const fromDir = await rootHandle.getDirectoryHandle(task.state);
+      const toDir = await rootHandle.getDirectoryHandle(targetState);
+      const source = await fromDir.getFileHandle(task.file);
+      const file = await source.getFile();
+      const target = await toDir.getFileHandle(task.file, { create: true });
+      const writable = await target.createWritable();
+      await writable.write(await file.arrayBuffer());
+      await writable.close();
+      await fromDir.removeEntry(task.file);
+    }
+
+    function setStatus(message, error = false) {
+      statusEl.textContent = message;
+      statusEl.classList.toggle("error", error);
+    }
+  </script>
+</body>
+</html>

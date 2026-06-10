@@ -147,6 +147,18 @@ func main() {
 			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
 			os.Exit(2)
 		}
+	case "fix":
+		opts, err := parseFixArgs(args[1:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		result, err := tasks.Fix(opts.repoRoot, tasks.FixOptions{DryRun: opts.dryRun})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		printFixResult(result)
 	case "status":
 		opts, err := parseJSONRepoArgs("status", args[1:])
 		if err != nil {
@@ -224,6 +236,11 @@ type moveOptions struct {
 type taskRepoOptions struct {
 	repoRoot string
 	task     string
+}
+
+type fixOptions struct {
+	repoRoot string
+	dryRun   bool
 }
 
 func runStatus(opts statusOptions) error {
@@ -392,6 +409,25 @@ func parseTaskRepoArgs(name string, args []string) (taskRepoOptions, error) {
 	return opts, nil
 }
 
+func parseFixArgs(args []string) (fixOptions, error) {
+	opts := fixOptions{repoRoot: "."}
+	var filtered []string
+	for _, arg := range args {
+		if arg == "--dry-run" {
+			opts.dryRun = true
+			continue
+		}
+		filtered = append(filtered, arg)
+	}
+	if len(filtered) > 1 {
+		return opts, fmt.Errorf("usage: patchboard fix [--dry-run] [repo-root]")
+	}
+	if len(filtered) == 1 {
+		opts.repoRoot = filtered[0]
+	}
+	return opts, nil
+}
+
 func parseJSONRepoArgs(name string, args []string) (jsonRepoOptions, error) {
 	flags := flag.NewFlagSet(name, flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
@@ -541,6 +577,29 @@ func printMoveResult(result tasks.MoveResult) {
 	fmt.Printf("%s -> %s\n", result.OldPath, result.NewPath)
 }
 
+func printFixResult(result tasks.FixResult) {
+	if result.DryRun {
+		fmt.Println("Patchboard fix preview")
+	} else {
+		fmt.Println("Patchboard fix")
+	}
+	fmt.Printf("Repo: %s\n", result.RepoRoot)
+	fmt.Printf("Task root: %s\n", result.TaskRoot)
+	fmt.Println()
+
+	if len(result.Operations) == 0 {
+		fmt.Println("No safe repairs")
+		return
+	}
+	for _, operation := range result.Operations {
+		verb := "would fix"
+		if operation.Applied {
+			verb = "fixed"
+		}
+		fmt.Printf("%s %s %s  %s\n", strings.ToUpper(verb), operation.Code, operation.Path, operation.Message)
+	}
+}
+
 func activeState(states []string) string {
 	for _, preferred := range []string{"2_doing", "doing"} {
 		if isState(states, preferred) {
@@ -580,5 +639,5 @@ func isState(states []string, value string) bool {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "Usage: patchboard [status|create|move|start|done|doctor|init|list|lint|todos] [args]")
+	fmt.Fprintln(os.Stderr, "Usage: patchboard [status|create|move|start|done|doctor|fix|init|list|lint|todos] [args]")
 }

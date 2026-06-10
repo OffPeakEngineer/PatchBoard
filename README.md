@@ -17,6 +17,7 @@ Patchboard is early. The current useful pieces are:
 - `patchboard start`: move a task to the active state
 - `patchboard done`: move a task to the primary done state
 - `patchboard doctor`: explain board setup and lint findings
+- `patchboard fix`: apply safe mechanical board repairs
 - `patchboard list`: list tasks by workflow state
 - `patchboard lint`: validate task files and linked code annotations
 - `patchboard todos`: list code annotations found across the repo
@@ -59,6 +60,7 @@ patchboard list --json 2_doing
 patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling"
 patchboard start fix-login-timeout
 patchboard done fix-login-timeout
+patchboard fix --dry-run
 patchboard lint
 patchboard lint --json
 patchboard todos
@@ -77,6 +79,7 @@ go run ./cmd/patchboard doctor
 go run ./cmd/patchboard list
 go run ./cmd/patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling"
 go run ./cmd/patchboard move fix-login-timeout doing
+go run ./cmd/patchboard fix --dry-run
 go run ./cmd/patchboard lint
 ```
 
@@ -89,6 +92,7 @@ go -C patchboard run ./cmd/patchboard doctor ..
 go -C patchboard run ./cmd/patchboard list ready ..
 go -C patchboard run ./cmd/patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling" ..
 go -C patchboard run ./cmd/patchboard move fix-login-timeout doing ..
+go -C patchboard run ./cmd/patchboard fix --dry-run ..
 go -C patchboard run ./cmd/patchboard lint ..
 go -C patchboard run ./cmd/patchboard todos ..
 ```
@@ -270,6 +274,12 @@ that reliable.
 Future follow-up generation should be explicit, for example a command that turns
 lint findings into planning task files on request. `patchboard lint` should not
 silently mutate the repo.
+
+`patchboard fix --dry-run` previews safe mechanical repairs. `patchboard fix`
+applies only low-risk updates such as creating missing board scaffolding and
+removing redundant frontmatter `status` fields. Ambiguous repairs, such as
+renaming task files or choosing a state for loose task files, remain doctor
+guidance for a human to decide.
 
 Exit codes:
 
