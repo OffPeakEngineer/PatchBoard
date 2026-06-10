@@ -11,7 +11,7 @@ readable and meaningful if the binary disappears.
 Patchboard is early. The current useful pieces are:
 
 - `patchboard` or `patchboard status`: summarize board health
-- `patchboard init`: create the default task board folders
+- `patchboard init`: create the default task board folders and `tasks/kanban.html`
 - `patchboard create`: create a task file from command-line fields
 - `patchboard doctor`: explain board setup and lint findings
 - `patchboard list`: list tasks by workflow state
@@ -23,7 +23,7 @@ Planned but not built yet:
 
 - task movement commands
 - lint follow-up task generation
-- a local web UI
+- broader browser support for writable kanban moves
 
 ## Quick Start
 
@@ -38,6 +38,7 @@ That creates:
 ```text
 tasks/
   README.md
+  kanban.html
   backlog/
   ready/
   doing/
@@ -58,6 +59,10 @@ patchboard lint
 patchboard lint --json
 patchboard todos
 ```
+
+You can also open `tasks/kanban.html` in a browser for a visual board. Browsers
+with local directory write support can move cards between state folders after
+you choose the project `tasks/` directory.
 
 During development, you can run the tool without installing it:
 
@@ -220,8 +225,8 @@ done_states:
   - 3_done
 filename:
   enabled: true
-  pattern: "^p[0-9]+(?:--rc-[0-9]+\\.[0-9]+\\.[0-9]+)?--[^-]+--[a-z0-9]+(?:-[a-z0-9]+)*\\.md$"
-  description: "pN[--rc-X.Y.Z]--icon--slug.md"
+  pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*\\.md$"
+  description: "slug.md"
   severity: warning
 ```
 
@@ -238,8 +243,8 @@ JSON is also supported for projects that prefer it:
   "done_states": ["-1_anti-feature", "3_done"],
   "filename": {
     "enabled": true,
-    "pattern": "^p[0-9]+(?:--rc-[0-9]+\\.[0-9]+\\.[0-9]+)?--[^-]+--[a-z0-9]+(?:-[a-z0-9]+)*\\.md$",
-    "description": "pN[--rc-X.Y.Z]--icon--slug.md",
+    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*\\.md$",
+    "description": "slug.md",
     "severity": "warning"
   }
 }
@@ -247,13 +252,14 @@ JSON is also supported for projects that prefer it:
 
 Use filename lint as a kindness, not a trap. A project manager who only lives
 inside `tasks/` should get a clear message such as
-"filename should match pN[--rc-X.Y.Z]--icon--slug.md", not a Go-shaped stack of nonsense.
+"filename should match slug.md", not a Go-shaped stack of nonsense.
 Set `"severity":
 "error"` only when the team wants CI or hooks to enforce the naming convention.
 
 Creation dates, task identity, ownership, tags, and richer durable metadata
-should live in frontmatter. Status, title, and priority can be derived from the
-file path or Markdown content when the board convention makes that reliable.
+should live in frontmatter. Status comes from the containing folder. Titles can
+come from Markdown content or from the filename when the board convention makes
+that reliable.
 
 Future follow-up generation should be explicit, for example a command that turns
 lint findings into planning task files on request. `patchboard lint` should not
@@ -322,4 +328,6 @@ Git history are the durable system. Patchboard is a helper, not the database.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+This project is dual-licensed under MIT OR Zlib. See [LICENSE](LICENSE), [LICENSE.MIT](LICENSE.MIT), and [LICENSE.zlib](LICENSE.zlib).
+
+Copyright (c) 2026 Andrew David LeTourneau

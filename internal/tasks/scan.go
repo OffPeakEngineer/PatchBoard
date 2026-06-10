@@ -370,10 +370,6 @@ func filenameSlug(path string) string {
 
 func filenameTitle(path string) string {
 	slug := filenameSlug(path)
-	parts := strings.Split(slug, "--")
-	if len(parts) >= 3 && regexp.MustCompile(`^p[0-9]+$`).MatchString(parts[0]) {
-		slug = parts[len(parts)-1]
-	}
 	return strings.ReplaceAll(slug, "-", " ")
 }
 

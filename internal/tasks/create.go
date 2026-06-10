@@ -10,13 +10,12 @@ import (
 )
 
 type CreateOptions struct {
-	State    string
-	Slug     string
-	Title    string
-	Priority string
-	Owner    string
-	Tags     []string
-	Now      time.Time
+	State string
+	Slug  string
+	Title string
+	Owner string
+	Tags  []string
+	Now   time.Time
 }
 
 type CreateResult struct {
@@ -39,9 +38,6 @@ func Create(repoRoot string, opts CreateOptions) (CreateResult, error) {
 	if opts.Title == "" {
 		return CreateResult{}, fmt.Errorf("task title is required")
 	}
-	if opts.Priority == "" {
-		opts.Priority = "medium"
-	}
 	if opts.Owner == "" {
 		opts.Owner = "andy"
 	}
@@ -57,7 +53,7 @@ func Create(repoRoot string, opts CreateOptions) (CreateResult, error) {
 	idDate := opts.Now.Format("20060102")
 	taskID := "task-" + idDate + "-" + slug
 
-	filename := date + "-" + slug + ".md"
+	filename := slug + ".md"
 	path := filepath.Join(root, cfg.TaskRoot, opts.State, filename)
 	if _, err := os.Stat(path); err == nil {
 		return CreateResult{}, fmt.Errorf("%s already exists", filepath.ToSlash(path))
@@ -69,15 +65,17 @@ func Create(repoRoot string, opts CreateOptions) (CreateResult, error) {
 		return CreateResult{}, err
 	}
 
-	content := renderTask(CreateOptions{
-		State:    opts.State,
-		Slug:     slug,
-		Title:    opts.Title,
-		Priority: opts.Priority,
-		Owner:    opts.Owner,
-		Tags:     opts.Tags,
-		Now:      opts.Now,
+	content, err := renderTask(CreateOptions{
+		State: opts.State,
+		Slug:  slug,
+		Title: opts.Title,
+		Owner: opts.Owner,
+		Tags:  opts.Tags,
+		Now:   opts.Now,
 	}, taskID, date)
+	if err != nil {
+		return CreateResult{}, err
+	}
 
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return CreateResult{}, err
@@ -90,38 +88,32 @@ func Create(repoRoot string, opts CreateOptions) (CreateResult, error) {
 	return CreateResult{Path: filepath.ToSlash(rel), ID: taskID}, nil
 }
 
-func renderTask(opts CreateOptions, taskID, date string) string {
-	var tags strings.Builder
+func renderTask(opts CreateOptions, taskID, date string) (string, error) {
+	var tags []string
 	for _, tag := range opts.Tags {
 		tag = normalizeSlug(tag)
 		if tag == "" {
 			continue
 		}
-		fmt.Fprintf(&tags, "  - %s\n", tag)
+		tags = append(tags, tag)
 	}
-	if tags.Len() == 0 {
-		tags.WriteString("  - task\n")
+	if len(tags) == 0 {
+		tags = append(tags, "task")
 	}
 
-	return fmt.Sprintf(`---
-id: %s
-owner: %s
-tags:
-%screated: %s
----
-
-# %s
-
-## Problem
-
-Describe what needs to change, and why.
-
-## Done when
-
-- The expected outcome is clear
-- Relevant checks pass
-- The completion path is captured in Git
-`, taskID, opts.Owner, tags.String(), date, opts.Title)
+	return renderTemplate("task.md.tmpl", struct {
+		ID      string
+		Owner   string
+		Tags    []string
+		Created string
+		Title   string
+	}{
+		ID:      taskID,
+		Owner:   opts.Owner,
+		Tags:    tags,
+		Created: date,
+		Title:   opts.Title,
+	})
 }
 
 func normalizeSlug(value string) string {

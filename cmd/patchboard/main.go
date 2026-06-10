@@ -27,7 +27,6 @@ func main() {
 		state := createFlags.String("state", "", "task workflow state")
 		slug := createFlags.String("slug", "", "task filename slug")
 		title := createFlags.String("title", "", "task title")
-		priority := createFlags.String("priority", "medium", "task priority")
 		owner := createFlags.String("owner", "andy", "task owner")
 		tags := createFlags.String("tags", "", "comma-separated task tags")
 		if err := createFlags.Parse(args[1:]); err != nil {
@@ -39,12 +38,11 @@ func main() {
 			root = createFlags.Arg(0)
 		}
 		result, err := tasks.Create(root, tasks.CreateOptions{
-			State:    *state,
-			Slug:     *slug,
-			Title:    *title,
-			Priority: *priority,
-			Owner:    *owner,
-			Tags:     splitTags(*tags),
+			State: *state,
+			Slug:  *slug,
+			Title: *title,
+			Owner: *owner,
+			Tags:  splitTags(*tags),
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)

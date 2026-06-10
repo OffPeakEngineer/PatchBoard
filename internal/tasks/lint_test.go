@@ -221,10 +221,15 @@ func TestInitCreatesDefaultTaskBoardWithoutOverwriting(t *testing.T) {
 		assertPathExists(t, root, "tasks", state, ".gitkeep")
 	}
 	assertPathExists(t, root, "tasks", "README.md")
+	assertPathExists(t, root, "tasks", "kanban.html")
 
 	readme := filepath.Join(root, "tasks", "README.md")
+	kanban := filepath.Join(root, "tasks", "kanban.html")
 	if err := os.WriteFile(readme, []byte("custom docs\n"), 0o644); err != nil {
 		t.Fatalf("customizing README: %v", err)
+	}
+	if err := os.WriteFile(kanban, []byte("custom board\n"), 0o644); err != nil {
+		t.Fatalf("customizing kanban: %v", err)
 	}
 	second, err := Init(root)
 	if err != nil {
@@ -239,6 +244,13 @@ func TestInitCreatesDefaultTaskBoardWithoutOverwriting(t *testing.T) {
 	}
 	if string(body) != "custom docs\n" {
 		t.Fatalf("init overwrote README: %q", string(body))
+	}
+	body, err = os.ReadFile(kanban)
+	if err != nil {
+		t.Fatalf("reading kanban: %v", err)
+	}
+	if string(body) != "custom board\n" {
+		t.Fatalf("init overwrote kanban: %q", string(body))
 	}
 }
 
@@ -260,7 +272,7 @@ done_states:
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
 	}
-	if result.Path != "tasks/0_backlog/2026-05-17-default-state-task.md" {
+	if result.Path != "tasks/0_backlog/default-state-task.md" {
 		t.Fatalf("unexpected path: %s", result.Path)
 	}
 }
@@ -284,7 +296,7 @@ done_states:
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
 	}
-	if result.Path != "tasks/0_planning/2026-05-17-planning-task.md" {
+	if result.Path != "tasks/0_planning/planning-task.md" {
 		t.Fatalf("unexpected path: %s", result.Path)
 	}
 }

@@ -40,9 +40,8 @@ default lane set should be:
 - `2_doing`
 - `3_done`
 
-Status, priority, and title should be derived from path conventions when they
-can be derived without losing useful context. Durable metadata belongs in
-frontmatter.
+Status and title should be derived from path conventions when they can be
+derived without losing useful context. Durable metadata belongs in frontmatter.
 
 The broader product may later support additional config filenames or formats,
 but this repo should use one canonical board config until that flexibility is

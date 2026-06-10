@@ -35,23 +35,18 @@ The default lane order should be:
 Patchboard may later provide an optional CI or release command that archives or
 clears completed tasks so the done lane does not grow without bound.
 
-The current priority-first filename convention is:
+Earlier filename experiments put ranking metadata and icons in the path. That
+made tab completion harder and framed the work around relative value instead of
+clarity. Work should be split into small, clear tasks, and sequencing should
+emerge from the visible path through the board. The finalized convention is
+plain, shell-friendly task slugs:
 
 ```text
-p<priority>--<emoji>--<slug>.md
+slug.md
 ```
 
-Release-candidate detail may be inserted after priority when needed:
-
-```text
-p1--rc-1.0.0--🚀--example.md
-```
-
-However, the priority prefix and emoji segment have proven awkward for tab
-completion and direct shell use. This task should evaluate and document a more
-conventional filename format that still preserves the same task information. Any
-information removed from the path must either be derivable from configuration or
-stored in frontmatter.
+Dates belong in `created`, task identity belongs in `id`, and workflow state
+belongs in the folder path.
 
 Frontmatter should keep durable task metadata such as:
 
@@ -61,9 +56,9 @@ Frontmatter should keep durable task metadata such as:
 - `created`
 
 Frontmatter should not duplicate values that Patchboard can reliably derive from
-the task path, such as lane/status, priority, and title. If a field cannot be
-derived without losing useful context, it should remain explicit metadata instead
-of being silently discarded.
+the task path, such as lane/status and title. If a field cannot be derived
+without losing useful context, it should remain explicit metadata instead of
+being silently discarded.
 
 ## Done when
 

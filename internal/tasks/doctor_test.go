@@ -4,7 +4,7 @@ import "testing"
 
 func TestDoctorFindsLooseRootTaskFiles(t *testing.T) {
 	root := t.TempDir()
-	writeFile(t, root, "tasks/p2--note.md", `---
+	writeFile(t, root, "tasks/note.md", `---
 id: task-loose
 title: Loose task
 ---
