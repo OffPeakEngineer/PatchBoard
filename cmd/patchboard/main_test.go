@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"testing"
+
+	"ledoerr/patchboard/internal/tasks"
+)
 
 func TestParseListArgsDefaultsToCurrentRepo(t *testing.T) {
 	opts, err := parseListArgs(nil)
@@ -50,4 +54,18 @@ func TestActiveStatePrefersConfiguredDoingLane(t *testing.T) {
 	if state != "2_doing" {
 		t.Fatalf("unexpected active state: %q", state)
 	}
+}
+
+func TestDoneStatePrefersConfiguredDoneLane(t *testing.T) {
+	state := doneState(testConfig(
+		[]string{"-1_anti-feature", "0_planning", "1_ready", "2_doing", "3_done"},
+		[]string{"-1_anti-feature", "3_done"},
+	))
+	if state != "3_done" {
+		t.Fatalf("unexpected done state: %q", state)
+	}
+}
+
+func testConfig(states, doneStates []string) tasks.Config {
+	return tasks.Config{States: states, DoneStates: doneStates}
 }

@@ -13,6 +13,9 @@ Patchboard is early. The current useful pieces are:
 - `patchboard` or `patchboard status`: summarize board health
 - `patchboard init`: create the default task board folders and `tasks/kanban.html`
 - `patchboard create`: create a task file from command-line fields
+- `patchboard move`: move a task file between configured states
+- `patchboard start`: move a task to the active state
+- `patchboard done`: move a task to the primary done state
 - `patchboard doctor`: explain board setup and lint findings
 - `patchboard list`: list tasks by workflow state
 - `patchboard lint`: validate task files and linked code annotations
@@ -21,7 +24,6 @@ Patchboard is early. The current useful pieces are:
 
 Planned but not built yet:
 
-- task movement commands
 - lint follow-up task generation
 - broader browser support for writable kanban moves
 
@@ -55,6 +57,8 @@ patchboard doctor
 patchboard list
 patchboard list --json 2_doing
 patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling"
+patchboard start fix-login-timeout
+patchboard done fix-login-timeout
 patchboard lint
 patchboard lint --json
 patchboard todos
@@ -72,6 +76,7 @@ go run ./cmd/patchboard status
 go run ./cmd/patchboard doctor
 go run ./cmd/patchboard list
 go run ./cmd/patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling"
+go run ./cmd/patchboard move fix-login-timeout doing
 go run ./cmd/patchboard lint
 ```
 
@@ -83,6 +88,7 @@ go -C patchboard run ./cmd/patchboard status ..
 go -C patchboard run ./cmd/patchboard doctor ..
 go -C patchboard run ./cmd/patchboard list ready ..
 go -C patchboard run ./cmd/patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling" ..
+go -C patchboard run ./cmd/patchboard move fix-login-timeout doing ..
 go -C patchboard run ./cmd/patchboard lint ..
 go -C patchboard run ./cmd/patchboard todos ..
 ```

@@ -49,6 +49,62 @@ func main() {
 			os.Exit(2)
 		}
 		fmt.Printf("Created %s (%s)\n", result.Path, result.ID)
+	case "move":
+		opts, err := parseMoveArgs(args[1:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		result, err := tasks.Move(opts.repoRoot, tasks.MoveOptions{Task: opts.task, State: opts.state})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		printMoveResult(result)
+	case "start":
+		opts, err := parseTaskRepoArgs("start", args[1:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		_, cfg, err := tasks.LoadConfig(opts.repoRoot)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		state := activeState(cfg.States)
+		if state == "" {
+			fmt.Fprintln(os.Stderr, "patchboard: no active state is configured")
+			os.Exit(2)
+		}
+		result, err := tasks.Move(opts.repoRoot, tasks.MoveOptions{Task: opts.task, State: state})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		printMoveResult(result)
+	case "done":
+		opts, err := parseTaskRepoArgs("done", args[1:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		_, cfg, err := tasks.LoadConfig(opts.repoRoot)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		state := doneState(cfg)
+		if state == "" {
+			fmt.Fprintln(os.Stderr, "patchboard: no done state is configured")
+			os.Exit(2)
+		}
+		result, err := tasks.Move(opts.repoRoot, tasks.MoveOptions{Task: opts.task, State: state})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		printMoveResult(result)
 	case "init":
 		root := repoRootArg(args[1:])
 		result, err := tasks.Init(root)
@@ -157,6 +213,17 @@ type statusOptions struct {
 type jsonRepoOptions struct {
 	repoRoot string
 	json     bool
+}
+
+type moveOptions struct {
+	repoRoot string
+	task     string
+	state    string
+}
+
+type taskRepoOptions struct {
+	repoRoot string
+	task     string
 }
 
 func runStatus(opts statusOptions) error {
@@ -303,6 +370,28 @@ func parseListArgs(args []string) (listOptions, error) {
 	return opts, nil
 }
 
+func parseMoveArgs(args []string) (moveOptions, error) {
+	if len(args) < 2 || len(args) > 3 {
+		return moveOptions{}, fmt.Errorf("usage: patchboard move <task> <state> [repo-root]")
+	}
+	opts := moveOptions{repoRoot: ".", task: args[0], state: args[1]}
+	if len(args) == 3 {
+		opts.repoRoot = args[2]
+	}
+	return opts, nil
+}
+
+func parseTaskRepoArgs(name string, args []string) (taskRepoOptions, error) {
+	if len(args) < 1 || len(args) > 2 {
+		return taskRepoOptions{}, fmt.Errorf("usage: patchboard %s <task> [repo-root]", name)
+	}
+	opts := taskRepoOptions{repoRoot: ".", task: args[0]}
+	if len(args) == 2 {
+		opts.repoRoot = args[1]
+	}
+	return opts, nil
+}
+
 func parseJSONRepoArgs(name string, args []string) (jsonRepoOptions, error) {
 	flags := flag.NewFlagSet(name, flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
@@ -443,6 +532,15 @@ func issueCounts(issues []tasks.Issue) (int, int) {
 	return errors, warnings
 }
 
+func printMoveResult(result tasks.MoveResult) {
+	if !result.Moved {
+		fmt.Printf("%s is already in %s (%s)\n", result.ID, result.To, result.OldPath)
+		return
+	}
+	fmt.Printf("Moved %s from %s to %s\n", result.ID, result.From, result.To)
+	fmt.Printf("%s -> %s\n", result.OldPath, result.NewPath)
+}
+
 func activeState(states []string) string {
 	for _, preferred := range []string{"2_doing", "doing"} {
 		if isState(states, preferred) {
@@ -458,6 +556,20 @@ func activeState(states []string) string {
 	return ""
 }
 
+func doneState(cfg tasks.Config) string {
+	for _, preferred := range []string{"3_done", "done", "archived"} {
+		if isState(cfg.DoneStates, preferred) && isState(cfg.States, preferred) {
+			return preferred
+		}
+	}
+	for _, state := range cfg.DoneStates {
+		if isState(cfg.States, state) {
+			return state
+		}
+	}
+	return ""
+}
+
 func isState(states []string, value string) bool {
 	for _, state := range states {
 		if value == state {
@@ -468,5 +580,5 @@ func isState(states []string, value string) bool {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "Usage: patchboard [status|create|doctor|init|list|lint|todos] [args]")
+	fmt.Fprintln(os.Stderr, "Usage: patchboard [status|create|move|start|done|doctor|init|list|lint|todos] [args]")
 }

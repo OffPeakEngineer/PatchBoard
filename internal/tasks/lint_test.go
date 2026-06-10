@@ -328,6 +328,66 @@ func TestCreateRendersDurableFrontmatterOnly(t *testing.T) {
 	}
 }
 
+func TestMoveTaskByIDBetweenConfiguredStates(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "tasks/ready/fix-login.md", `---
+id: task-auth
+---
+
+# Fix login
+`)
+
+	result, err := Move(root, MoveOptions{Task: "task-auth", State: "doing"})
+	if err != nil {
+		t.Fatalf("Move returned error: %v", err)
+	}
+	if !result.Moved || result.From != "ready" || result.To != "doing" {
+		t.Fatalf("unexpected move result: %#v", result)
+	}
+	assertPathExists(t, root, "tasks", "doing", "fix-login.md")
+	if _, err := os.Stat(filepath.Join(root, "tasks", "ready", "fix-login.md")); !os.IsNotExist(err) {
+		t.Fatalf("expected old task path to be gone, got %v", err)
+	}
+}
+
+func TestMoveTaskCanMatchSlugAndRelativePath(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "tasks/ready/fix-login.md", `---
+id: task-auth
+---
+
+# Fix login
+`)
+
+	if _, err := Move(root, MoveOptions{Task: "fix-login", State: "doing"}); err != nil {
+		t.Fatalf("Move by slug returned error: %v", err)
+	}
+	if _, err := Move(root, MoveOptions{Task: "doing/fix-login.md", State: "done"}); err != nil {
+		t.Fatalf("Move by relative path returned error: %v", err)
+	}
+	assertPathExists(t, root, "tasks", "done", "fix-login.md")
+}
+
+func TestMoveTaskRejectsAmbiguousQuery(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "tasks/ready/fix-login.md", `---
+id: task-one
+---
+
+# Fix login
+`)
+	writeFile(t, root, "tasks/doing/fix-login.md", `---
+id: task-two
+---
+
+# Fix login
+`)
+
+	if _, err := Move(root, MoveOptions{Task: "fix-login", State: "done"}); err == nil {
+		t.Fatal("expected ambiguous task error")
+	}
+}
+
 func writeFile(t *testing.T, root, name, content string) {
 	t.Helper()
 	path := filepath.Join(root, name)
