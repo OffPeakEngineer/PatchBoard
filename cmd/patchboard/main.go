@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -13,7 +14,7 @@ import (
 func main() {
 	args := os.Args[1:]
 	if len(args) == 0 {
-		if err := runStatus("."); err != nil {
+		if err := runStatus(statusOptions{repoRoot: "."}); err != nil {
 			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
 			os.Exit(2)
 		}
@@ -62,14 +63,26 @@ func main() {
 			fmt.Printf("Created %d paths\n", len(result.Created))
 		}
 	case "lint":
-		result, err := tasks.Lint(repoRootArg(args[1:]))
+		opts, err := parseJSONRepoArgs("lint", args[1:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		result, err := tasks.Lint(opts.repoRoot)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
 			os.Exit(2)
 		}
 
-		for _, issue := range result.Issues {
-			fmt.Println(issue.String())
+		if opts.json {
+			if err := writeJSON(result); err != nil {
+				fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+				os.Exit(2)
+			}
+		} else {
+			for _, issue := range result.Issues {
+				fmt.Println(issue.String())
+			}
 		}
 
 		if result.HasErrors() {
@@ -81,7 +94,12 @@ func main() {
 			os.Exit(2)
 		}
 	case "status":
-		if err := runStatus(repoRootArg(args[1:])); err != nil {
+		opts, err := parseJSONRepoArgs("status", args[1:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		if err := runStatus(statusOptions{repoRoot: opts.repoRoot, json: opts.json}); err != nil {
 			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
 			os.Exit(2)
 		}
@@ -96,13 +114,27 @@ func main() {
 			os.Exit(2)
 		}
 	case "todos":
-		result, err := tasks.Lint(repoRootArg(args[1:]))
+		opts, err := parseJSONRepoArgs("todos", args[1:])
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
 			os.Exit(2)
 		}
-		for _, todo := range result.Todos {
-			fmt.Println(todo.String())
+		result, err := tasks.Lint(opts.repoRoot)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		if opts.json {
+			if err := writeJSON(struct {
+				Todos []tasks.Annotation `json:"todos"`
+			}{Todos: result.Todos}); err != nil {
+				fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+				os.Exit(2)
+			}
+		} else {
+			for _, todo := range result.Todos {
+				fmt.Println(todo.String())
+			}
 		}
 	case "help", "-h", "--help":
 		usage()
@@ -116,10 +148,21 @@ func main() {
 type listOptions struct {
 	repoRoot string
 	state    string
+	json     bool
 }
 
-func runStatus(repoRoot string) error {
-	root, cfg, err := tasks.LoadConfig(repoRoot)
+type statusOptions struct {
+	repoRoot string
+	json     bool
+}
+
+type jsonRepoOptions struct {
+	repoRoot string
+	json     bool
+}
+
+func runStatus(opts statusOptions) error {
+	root, cfg, err := tasks.LoadConfig(opts.repoRoot)
 	if err != nil {
 		return err
 	}
@@ -130,6 +173,10 @@ func runStatus(repoRoot string) error {
 
 	tasksByState := groupTasksByState(result.Tasks)
 	errorCount, warningCount := issueCounts(result.Issues)
+
+	if opts.json {
+		return writeJSON(statusJSON(cfg, result, tasksByState, errorCount, warningCount))
+	}
 
 	fmt.Println("Patchboard status")
 	fmt.Println()
@@ -182,6 +229,10 @@ func runList(opts listOptions) error {
 	}
 
 	tasksByState := groupTasksByState(result.Tasks)
+	if opts.json {
+		return writeJSON(listJSON(cfg, tasksByState, opts.state))
+	}
+
 	for _, state := range cfg.States {
 		if opts.state != "" && opts.state != state {
 			continue
@@ -224,6 +275,15 @@ func runDoctor(repoRoot string) error {
 
 func parseListArgs(args []string) (listOptions, error) {
 	opts := listOptions{repoRoot: "."}
+	var filtered []string
+	for _, arg := range args {
+		if arg == "--json" {
+			opts.json = true
+			continue
+		}
+		filtered = append(filtered, arg)
+	}
+	args = filtered
 	if len(args) == 0 {
 		return opts, nil
 	}
@@ -243,6 +303,29 @@ func parseListArgs(args []string) (listOptions, error) {
 	opts.state = args[0]
 	opts.repoRoot = args[1]
 	return opts, nil
+}
+
+func parseJSONRepoArgs(name string, args []string) (jsonRepoOptions, error) {
+	flags := flag.NewFlagSet(name, flag.ContinueOnError)
+	flags.SetOutput(os.Stderr)
+	jsonOut := flags.Bool("json", false, "emit JSON")
+	if err := flags.Parse(args); err != nil {
+		return jsonRepoOptions{}, err
+	}
+	if flags.NArg() > 1 {
+		return jsonRepoOptions{}, fmt.Errorf("usage: patchboard %s [--json] [repo-root]", name)
+	}
+	opts := jsonRepoOptions{repoRoot: ".", json: *jsonOut}
+	if flags.NArg() == 1 {
+		opts.repoRoot = flags.Arg(0)
+	}
+	return opts, nil
+}
+
+func writeJSON(value any) error {
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(value)
 }
 
 func repoRootArg(args []string) string {
@@ -273,6 +356,71 @@ func groupTasksByState(taskList []tasks.Task) map[string][]tasks.Task {
 		tasksByState[task.State] = append(tasksByState[task.State], task)
 	}
 	return tasksByState
+}
+
+type stateSummary struct {
+	State string       `json:"state"`
+	Count int          `json:"count"`
+	Tasks []tasks.Task `json:"tasks,omitempty"`
+}
+
+type statusSummary struct {
+	TaskRoot     string         `json:"task_root"`
+	States       []stateSummary `json:"states"`
+	ActiveState  string         `json:"active_state,omitempty"`
+	ActiveTasks  []tasks.Task   `json:"active_tasks"`
+	Annotations  int            `json:"annotations"`
+	LintErrors   int            `json:"lint_errors"`
+	LintWarnings int            `json:"lint_warnings"`
+	Issues       []tasks.Issue  `json:"issues"`
+}
+
+type listSummary struct {
+	States []stateSummary `json:"states"`
+}
+
+func statusJSON(cfg tasks.Config, result tasks.Result, tasksByState map[string][]tasks.Task, errorCount, warningCount int) statusSummary {
+	states := make([]stateSummary, 0, len(cfg.States))
+	for _, state := range cfg.States {
+		stateTasks := append([]tasks.Task(nil), tasksByState[state]...)
+		sortTasks(stateTasks)
+		states = append(states, stateSummary{
+			State: state,
+			Count: len(stateTasks),
+		})
+	}
+
+	active := activeState(cfg.States)
+	activeTasks := append([]tasks.Task(nil), tasksByState[active]...)
+	sortTasks(activeTasks)
+
+	return statusSummary{
+		TaskRoot:     cfg.TaskRoot,
+		States:       states,
+		ActiveState:  active,
+		ActiveTasks:  activeTasks,
+		Annotations:  len(result.Todos),
+		LintErrors:   errorCount,
+		LintWarnings: warningCount,
+		Issues:       result.Issues,
+	}
+}
+
+func listJSON(cfg tasks.Config, tasksByState map[string][]tasks.Task, stateFilter string) listSummary {
+	states := make([]stateSummary, 0, len(cfg.States))
+	for _, state := range cfg.States {
+		if stateFilter != "" && stateFilter != state {
+			continue
+		}
+		stateTasks := append([]tasks.Task(nil), tasksByState[state]...)
+		sortTasks(stateTasks)
+		states = append(states, stateSummary{
+			State: state,
+			Count: len(stateTasks),
+			Tasks: stateTasks,
+		})
+	}
+	return listSummary{States: states}
 }
 
 func sortTasks(taskList []tasks.Task) {

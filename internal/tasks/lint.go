@@ -20,10 +20,28 @@ func Lint(repoRoot string) (Result, error) {
 		return Result{}, err
 	}
 
-	result := Result{Tasks: taskList, Todos: todoList}
+	result := Result{
+		Tasks:  nonNilTasks(taskList),
+		Todos:  nonNilAnnotations(todoList),
+		Issues: []Issue{},
+	}
 	result.Issues = append(result.Issues, lintTasks(taskList, cfg)...)
 	result.Issues = append(result.Issues, lintTodos(taskList, todoList, cfg)...)
 	return result, nil
+}
+
+func nonNilTasks(taskList []Task) []Task {
+	if taskList == nil {
+		return []Task{}
+	}
+	return taskList
+}
+
+func nonNilAnnotations(todoList []Annotation) []Annotation {
+	if todoList == nil {
+		return []Annotation{}
+	}
+	return todoList
 }
 
 // lintTasks validates the Markdown task board itself. The folder name is the

@@ -1,7 +1,7 @@
 task_root: tasks
 states:
   - -1_anti-feature
-  - 0_backlog
+  - 0_planning
   - 1_ready
   - 2_doing
   - 3_done
@@ -10,6 +10,6 @@ done_states:
   - 3_done
 filename:
   enabled: true
-  pattern: "^p[0-9]+--[^-]+--[a-z0-9]+(?:-[a-z0-9]+)*\\.md$"
-  description: "pN--icon--slug.md"
+  pattern: "^p[0-9]+(?:--rc-[0-9]+\\.[0-9]+\\.[0-9]+)?--[^-]+--[a-z0-9]+(?:-[a-z0-9]+)*\\.md$"
+  description: "pN[--rc-X.Y.Z]--icon--slug.md"
   severity: warning

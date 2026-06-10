@@ -110,12 +110,11 @@ trail.
 ~~~markdown
 ---
 id: task-YYYYMMDD-short-name
-title: Short, concrete task title
-status: backlog
-priority: medium
 owner: your-name
 created: YYYY-MM-DD
 ---
+
+# Short, concrete task title
 
 ## Problem
 
@@ -127,8 +126,9 @@ What needs to change, and why?
 - Relevant tests or checks pass
 ~~~
 
-The folder is authoritative for status. If frontmatter includes `+"`status`"+`,
-it should match the parent folder.
+Frontmatter stores durable task metadata. The folder is authoritative for
+status, and title/priority may be derived from the filename or Markdown content
+according to the board convention.
 
 ## Code Annotations
 

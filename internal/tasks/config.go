@@ -10,7 +10,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-var ConfigFileNames = []string{".patchboard.yaml", ".patchboard.yml", ".patchboard.json"}
+var BoardConfigFileNames = []string{"board.yml", "board.yaml", "board.json"}
+var RootConfigFileNames = []string{".patchboard.yaml", ".patchboard.yml", ".patchboard.json"}
 
 type Config struct {
 	TaskRoot          string         `json:"task_root"`
@@ -118,7 +119,16 @@ func findRepoRoot(start string, cfg Config) (string, string, error) {
 	}
 
 	for {
-		for _, configFileName := range ConfigFileNames {
+		for _, configFileName := range BoardConfigFileNames {
+			configPath := filepath.Join(current, cfg.TaskRoot, configFileName)
+			if _, err := os.Stat(configPath); err == nil {
+				return current, configPath, nil
+			} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return "", "", err
+			}
+		}
+
+		for _, configFileName := range RootConfigFileNames {
 			configPath := filepath.Join(current, configFileName)
 			if _, err := os.Stat(configPath); err == nil {
 				return current, configPath, nil

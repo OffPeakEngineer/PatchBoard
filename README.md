@@ -17,10 +17,10 @@ Patchboard is early. The current useful pieces are:
 - `patchboard list`: list tasks by workflow state
 - `patchboard lint`: validate task files and linked code annotations
 - `patchboard todos`: list code annotations found across the repo
+- `--json`: emit structured output for `status`, `list`, `lint`, and `todos`
 
 Planned but not built yet:
 
-- JSON output
 - task movement commands
 - lint follow-up task generation
 - a local web UI
@@ -52,8 +52,10 @@ Then run:
 patchboard
 patchboard doctor
 patchboard list
+patchboard list --json 2_doing
 patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling"
 patchboard lint
+patchboard lint --json
 patchboard todos
 ```
 
@@ -94,15 +96,14 @@ but useful:
 ```markdown
 ---
 id: task-20260512-auth-timeout
-title: Fix login timeout handling
-status: doing
-priority: medium
 owner: andy
 tags:
   - auth
   - bug
 created: 2026-05-12
 ---
+
+# Fix login timeout handling
 
 ## Problem
 
@@ -118,11 +119,12 @@ Users can get stuck after their session expires.
 Identity rules:
 
 - Task ID: frontmatter `id`, otherwise the filename slug
-- Task title: frontmatter `title`, otherwise the first Markdown heading,
-  otherwise the filename slug
+- Task title: the first H1 Markdown heading, otherwise frontmatter `title`,
+  otherwise the filename slug. New tasks should prefer a Markdown heading.
 - Task state: parent folder under `tasks/`
 
-Because the folder is authoritative, this is invalid:
+Because the folder is authoritative, frontmatter status is redundant. If a
+legacy task includes it, this is invalid:
 
 ```text
 tasks/done/fix-login-timeout.md
@@ -202,39 +204,42 @@ Unlinked annotations are listed by `patchboard todos`, but they do not fail
 ## Configuration
 
 Patchboard works without configuration. Repos can opt into local conventions
-with `.patchboard.yaml`, `.patchboard.yml`, or `.patchboard.json` at the repo
-root. YAML is nice for project-owned repos because it is comment-friendly:
+with `tasks/board.yml`, `tasks/board.yaml`, or `tasks/board.json`. Keeping the
+config under `tasks/` keeps board metadata near the board it describes:
 
 ```yaml
 task_root: tasks
 states:
-  - backlog
-  - ready
-  - doing
-  - blocked
-  - done
-  - archived
+  - -1_anti-feature
+  - 0_planning
+  - 1_ready
+  - 2_doing
+  - 3_done
 done_states:
-  - done
-  - archived
+  - -1_anti-feature
+  - 3_done
 filename:
   enabled: true
-  pattern: "^[^-]+--p[0-9]+--[a-z0-9]+(?:-[a-z0-9]+)*\\.md$"
-  description: "<type>--pN--slug.md"
+  pattern: "^p[0-9]+(?:--rc-[0-9]+\\.[0-9]+\\.[0-9]+)?--[^-]+--[a-z0-9]+(?:-[a-z0-9]+)*\\.md$"
+  description: "pN[--rc-X.Y.Z]--icon--slug.md"
   severity: warning
 ```
+
+Legacy root config files named `.patchboard.yaml`, `.patchboard.yml`, or
+`.patchboard.json` are still supported for existing repos. Board-local config
+takes precedence when both are present.
 
 JSON is also supported for projects that prefer it:
 
 ```json
 {
   "task_root": "tasks",
-  "states": ["backlog", "ready", "doing", "blocked", "done", "archived"],
-  "done_states": ["done", "archived"],
+  "states": ["-1_anti-feature", "0_planning", "1_ready", "2_doing", "3_done"],
+  "done_states": ["-1_anti-feature", "3_done"],
   "filename": {
     "enabled": true,
-    "pattern": "^[^-]+--p[0-9]+--[a-z0-9]+(?:-[a-z0-9]+)*\\.md$",
-    "description": "<type>--pN--slug.md",
+    "pattern": "^p[0-9]+(?:--rc-[0-9]+\\.[0-9]+\\.[0-9]+)?--[^-]+--[a-z0-9]+(?:-[a-z0-9]+)*\\.md$",
+    "description": "pN[--rc-X.Y.Z]--icon--slug.md",
     "severity": "warning"
   }
 }
@@ -242,16 +247,16 @@ JSON is also supported for projects that prefer it:
 
 Use filename lint as a kindness, not a trap. A project manager who only lives
 inside `tasks/` should get a clear message such as
-"filename should match <type>--pN--slug.md", not a Go-shaped stack of nonsense.
+"filename should match pN[--rc-X.Y.Z]--icon--slug.md", not a Go-shaped stack of nonsense.
 Set `"severity":
 "error"` only when the team wants CI or hooks to enforce the naming convention.
 
-Creation dates, task identity, and richer metadata should live in frontmatter.
-Filename conventions are for quick scanning, not as a replacement for the task
-record itself.
+Creation dates, task identity, ownership, tags, and richer durable metadata
+should live in frontmatter. Status, title, and priority can be derived from the
+file path or Markdown content when the board convention makes that reliable.
 
 Future follow-up generation should be explicit, for example a command that turns
-lint findings into backlog task files on request. `patchboard lint` should not
+lint findings into planning task files on request. `patchboard lint` should not
 silently mutate the repo.
 
 Exit codes:
@@ -260,9 +265,10 @@ Exit codes:
 - `1`: lint errors
 - `2`: config, repo, or tooling error
 
-## Defaults
+## Built-in Defaults
 
-Patchboard currently works without config:
+Patchboard still works without config. The built-in defaults remain generic so
+existing repos can opt in without learning a naming scheme first:
 
 ```yaml
 task_root: tasks

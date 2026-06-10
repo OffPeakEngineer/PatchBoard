@@ -72,16 +72,29 @@ func scanTasks(taskRoot string, cfg Config) ([]Task, error) {
 			return err
 		}
 		meta, markdown := parseMarkdown(body)
-		title := firstNonEmpty(meta["title"], firstHeading(markdown), filenameSlug(path))
-		id := firstNonEmpty(meta["id"], filenameSlug(path))
+		title, titleSource := firstNonEmptyWithSource(
+			[]sourcedValue{
+				{Value: firstHeading(markdown), Source: "markdown"},
+				{Value: meta["title"], Source: "frontmatter"},
+				{Value: filenameTitle(path), Source: "path"},
+			},
+		)
+		id, idSource := firstNonEmptyWithSource(
+			[]sourcedValue{
+				{Value: meta["id"], Source: "frontmatter"},
+				{Value: filenameSlug(path), Source: "path"},
+			},
+		)
 
 		taskList = append(taskList, Task{
-			ID:              id,
-			Title:           title,
-			State:           parts[0],
-			Path:            filepath.ToSlash(filepath.Join(cfg.TaskRoot, rel)),
-			FrontmatterID:   meta["id"],
-			FrontmatterStat: meta["status"],
+			ID:               id,
+			Title:            title,
+			State:            parts[0],
+			Path:             filepath.ToSlash(filepath.Join(cfg.TaskRoot, rel)),
+			Sources:          map[string]string{"id": idSource, "title": titleSource, "state": "path"},
+			FrontmatterID:    meta["id"],
+			FrontmatterTitle: meta["title"],
+			FrontmatterStat:  meta["status"],
 		})
 		return nil
 	})
@@ -343,8 +356,8 @@ func parseSimpleYAML(text string) map[string]string {
 func firstHeading(markdown string) string {
 	for _, line := range strings.Split(markdown, "\n") {
 		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "#") {
-			return strings.TrimSpace(strings.TrimLeft(line, "#"))
+		if strings.HasPrefix(line, "# ") {
+			return strings.TrimSpace(strings.TrimPrefix(line, "# "))
 		}
 	}
 	return ""
@@ -355,6 +368,15 @@ func filenameSlug(path string) string {
 	return strings.TrimSuffix(base, filepath.Ext(base))
 }
 
+func filenameTitle(path string) string {
+	slug := filenameSlug(path)
+	parts := strings.Split(slug, "--")
+	if len(parts) >= 3 && regexp.MustCompile(`^p[0-9]+$`).MatchString(parts[0]) {
+		slug = parts[len(parts)-1]
+	}
+	return strings.ReplaceAll(slug, "-", " ")
+}
+
 func firstNonEmpty(values ...string) string {
 	for _, value := range values {
 		if strings.TrimSpace(value) != "" {
@@ -362,4 +384,18 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+type sourcedValue struct {
+	Value  string
+	Source string
+}
+
+func firstNonEmptyWithSource(values []sourcedValue) (string, string) {
+	for _, value := range values {
+		if strings.TrimSpace(value.Value) != "" {
+			return strings.TrimSpace(value.Value), value.Source
+		}
+	}
+	return "", ""
 }

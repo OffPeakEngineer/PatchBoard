@@ -9,25 +9,27 @@ import (
 // board. The scanner keeps both derived fields and frontmatter fields so lint
 // rules can explain mismatches clearly.
 type Task struct {
-	ID              string
-	Title           string
-	State           string
-	Path            string
-	FrontmatterID   string
-	FrontmatterStat string
+	ID               string            `json:"id"`
+	Title            string            `json:"title"`
+	State            string            `json:"state"`
+	Path             string            `json:"path"`
+	Sources          map[string]string `json:"sources,omitempty"`
+	FrontmatterID    string            `json:"frontmatter_id,omitempty"`
+	FrontmatterTitle string            `json:"frontmatter_title,omitempty"`
+	FrontmatterStat  string            `json:"frontmatter_status,omitempty"`
 }
 
 // Annotation is a code comment marker such as TODO, FIXME, XXX, or WARN.
 // It may point at a Patchboard task with MARKER[task-id]:, or it may simply
 // record loose follow-up text with MARKER:.
 type Annotation struct {
-	Marker string
-	TaskID string
-	Owner  string
-	Path   string
-	Line   int
-	Syntax string
-	Text   string
+	Marker string `json:"marker"`
+	TaskID string `json:"task_id,omitempty"`
+	Owner  string `json:"owner,omitempty"`
+	Path   string `json:"path"`
+	Line   int    `json:"line"`
+	Syntax string `json:"syntax"`
+	Text   string `json:"text,omitempty"`
 }
 
 func (t Annotation) String() string {
@@ -52,11 +54,11 @@ func (t Annotation) String() string {
 // Issue is one lint finding formatted for human output. Path is repo-relative
 // when the issue came from a scanned file.
 type Issue struct {
-	Severity string
-	Code     string
-	Path     string
-	Line     int
-	Message  string
+	Severity string `json:"severity"`
+	Code     string `json:"code"`
+	Path     string `json:"path"`
+	Line     int    `json:"line,omitempty"`
+	Message  string `json:"message"`
 }
 
 func (i Issue) String() string {
@@ -70,9 +72,9 @@ func (i Issue) String() string {
 // Result is the complete scan and lint output. Commands can use Tasks and Todos
 // for read-only views, and Issues for validation output.
 type Result struct {
-	Tasks  []Task
-	Todos  []Annotation
-	Issues []Issue
+	Tasks  []Task       `json:"tasks"`
+	Todos  []Annotation `json:"todos"`
+	Issues []Issue      `json:"issues"`
 }
 
 // HasErrors reports whether the result should fail the CLI with exit code 1.

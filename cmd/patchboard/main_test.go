@@ -34,6 +34,17 @@ func TestParseListArgsAcceptsRepoRootWithoutState(t *testing.T) {
 	}
 }
 
+func TestParseListArgsAcceptsJSONFlag(t *testing.T) {
+	root := t.TempDir()
+	opts, err := parseListArgs([]string{"--json", "2_doing", root})
+	if err != nil {
+		t.Fatalf("parseListArgs returned error: %v", err)
+	}
+	if opts.repoRoot != root || opts.state != "2_doing" || !opts.json {
+		t.Fatalf("unexpected options: %#v", opts)
+	}
+}
+
 func TestActiveStatePrefersConfiguredDoingLane(t *testing.T) {
 	state := activeState([]string{"0_backlog", "1_ready", "2_doing", "3_done"})
 	if state != "2_doing" {

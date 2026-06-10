@@ -3,6 +3,7 @@ package tasks
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -175,6 +176,36 @@ status: ready
 	}
 }
 
+func TestLintPrefersTaskBoardConfigOverRootConfig(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, ".patchboard.yaml", `
+states:
+  - wrong
+`)
+	writeFile(t, root, "tasks/board.yml", `
+states:
+  - 0_planning
+  - 1_ready
+  - 2_doing
+done_states:
+  - 2_doing
+`)
+	writeFile(t, root, "tasks/0_planning/task.md", `---
+id: task-board-config
+---
+
+# Board config
+`)
+
+	result, err := Lint(root)
+	if err != nil {
+		t.Fatalf("Lint returned error: %v", err)
+	}
+	if hasIssue(result, "TASK001") {
+		t.Fatalf("expected tasks/board.yml to win over root config, got %#v", result.Issues)
+	}
+}
+
 func TestInitCreatesDefaultTaskBoardWithoutOverwriting(t *testing.T) {
 	root := t.TempDir()
 
@@ -231,6 +262,57 @@ done_states:
 	}
 	if result.Path != "tasks/0_backlog/2026-05-17-default-state-task.md" {
 		t.Fatalf("unexpected path: %s", result.Path)
+	}
+}
+
+func TestCreateDefaultsToPlanningBeforeAntiFeature(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "tasks/board.yml", `
+states:
+  - -1_anti-feature
+  - 0_planning
+  - 1_ready
+  - 2_doing
+done_states:
+  - -1_anti-feature
+`)
+
+	result, err := Create(root, CreateOptions{
+		Title: "Planning task",
+		Now:   time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+	if result.Path != "tasks/0_planning/2026-05-17-planning-task.md" {
+		t.Fatalf("unexpected path: %s", result.Path)
+	}
+}
+
+func TestCreateRendersDurableFrontmatterOnly(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "tasks/ready/.gitkeep", "")
+
+	result, err := Create(root, CreateOptions{
+		State: "ready",
+		Title: "Generated task",
+		Now:   time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	body, err := os.ReadFile(filepath.Join(root, result.Path))
+	if err != nil {
+		t.Fatalf("reading task: %v", err)
+	}
+	for _, forbidden := range []string{"title:", "status:", "priority:"} {
+		if strings.Contains(string(body), forbidden) {
+			t.Fatalf("generated task includes derived field %q:\n%s", forbidden, string(body))
+		}
+	}
+	if !strings.Contains(string(body), "# Generated task") {
+		t.Fatalf("generated task should preserve title as Markdown heading:\n%s", string(body))
 	}
 }
 

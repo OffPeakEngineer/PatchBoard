@@ -30,10 +30,8 @@ func Create(repoRoot string, opts CreateOptions) (CreateResult, error) {
 		return CreateResult{}, err
 	}
 
-	if !contains(cfg.States, opts.State) {
-		if opts.State == "" && len(cfg.States) > 0 {
-			opts.State = cfg.States[0]
-		}
+	if opts.State == "" {
+		opts.State = defaultCreateState(cfg.States)
 	}
 	if !contains(cfg.States, opts.State) {
 		return CreateResult{}, fmt.Errorf("unknown task state %q", opts.State)
@@ -107,13 +105,12 @@ func renderTask(opts CreateOptions, taskID, date string) string {
 
 	return fmt.Sprintf(`---
 id: %s
-title: %s
-status: %s
-priority: %s
 owner: %s
 tags:
 %screated: %s
 ---
+
+# %s
 
 ## Problem
 
@@ -124,7 +121,7 @@ Describe what needs to change, and why.
 - The expected outcome is clear
 - Relevant checks pass
 - The completion path is captured in Git
-`, taskID, opts.Title, opts.State, opts.Priority, opts.Owner, tags.String(), date)
+`, taskID, opts.Owner, tags.String(), date, opts.Title)
 }
 
 func normalizeSlug(value string) string {
@@ -142,4 +139,16 @@ func contains(values []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+func defaultCreateState(states []string) string {
+	for _, preferred := range []string{"0_planning", "backlog", "planning", "0_backlog", "1_ready", "ready"} {
+		if contains(states, preferred) {
+			return preferred
+		}
+	}
+	if len(states) > 0 {
+		return states[0]
+	}
+	return ""
 }
