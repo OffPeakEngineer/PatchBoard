@@ -6,6 +6,35 @@ Tasks are Markdown files. Folders are workflow states. Git history is the audit
 trail. The tool should make the system easier to use, but the files must stay
 readable and meaningful if the binary disappears.
 
+## Why Patchboard
+
+Patchboard gives a team a task board that lives in the same place as the work.
+Instead of copying status between a ticket system, a spreadsheet, and a repo,
+the board is ordinary Markdown files under `tasks/`. Moving a task is a file
+move. Editing a task is a normal text edit. Reviewing how the plan changed is a
+normal Git history question.
+
+That makes the board accessible from two directions:
+
+- Product and project collaborators can open `tasks/kanban.html` and see a
+  familiar board.
+- Engineering collaborators can use the CLI, shell, Vim, Git, and code review
+  without leaving the repo-native workflow.
+
+Patchboard is intentionally not a database. The durable record is the file tree,
+and the tool is there to make that tree easier to inspect, repair, and automate.
+
+## Who Should Use This
+
+Patchboard fits small product, design, infrastructure, and engineering teams
+that want planning context close to implementation context. It is especially
+useful when work needs to remain legible in pull requests, local checkouts,
+offline clones, or long-lived repositories.
+
+It is not trying to replace full portfolio planning, customer support queues, or
+company-wide reporting systems. It works best as the repo-local layer of truth:
+the concrete plan for what this repository is doing next.
+
 ## Status
 
 Patchboard is early. The current useful pieces are:
@@ -18,6 +47,7 @@ Patchboard is early. The current useful pieces are:
 - `patchboard done`: move a task to the primary done state
 - `patchboard doctor`: explain board setup and lint findings
 - `patchboard fix`: apply safe mechanical board repairs
+- `patchboard undo`: preview or restore task-board changes with Git
 - `patchboard list`: list tasks by workflow state
 - `patchboard lint`: validate task files and linked code annotations
 - `patchboard todos`: list code annotations found across the repo
@@ -61,6 +91,7 @@ patchboard create --state ready --slug fix-login-timeout --title "Fix login time
 patchboard start fix-login-timeout
 patchboard done fix-login-timeout
 patchboard fix --dry-run
+patchboard undo
 patchboard lint
 patchboard lint --json
 patchboard todos
@@ -80,6 +111,7 @@ go run ./cmd/patchboard list
 go run ./cmd/patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling"
 go run ./cmd/patchboard move fix-login-timeout doing
 go run ./cmd/patchboard fix --dry-run
+go run ./cmd/patchboard undo
 go run ./cmd/patchboard lint
 ```
 
@@ -93,6 +125,7 @@ go -C patchboard run ./cmd/patchboard list ready ..
 go -C patchboard run ./cmd/patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling" ..
 go -C patchboard run ./cmd/patchboard move fix-login-timeout doing ..
 go -C patchboard run ./cmd/patchboard fix --dry-run ..
+go -C patchboard run ./cmd/patchboard undo ..
 go -C patchboard run ./cmd/patchboard lint ..
 go -C patchboard run ./cmd/patchboard todos ..
 ```
@@ -280,6 +313,12 @@ applies only low-risk updates such as creating missing board scaffolding and
 removing redundant frontmatter `status` fields. Ambiguous repairs, such as
 renaming task files or choosing a state for loose task files, remain doctor
 guidance for a human to decide.
+
+`patchboard undo` previews task-board changes that Git can restore.
+`patchboard undo --apply` delegates to native `git restore` and refuses to run
+while unrelated untracked task files are present. For a browser-only workflow,
+`tasks/kanban.html` can undo the most recent drag/drop move during the current
+session.
 
 Exit codes:
 

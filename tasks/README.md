@@ -3,6 +3,11 @@
 This is Patchboard's own dogfood board. Tasks are Markdown files, and state is
 derived from the containing folder.
 
+The board is the durable planning surface for this repository. Product context,
+technical notes, and implementation follow-up should stay readable here even if
+the Patchboard binary is not installed. Git history is the audit trail for how
+the plan moved.
+
 ## States
 
 - `-1_anti-feature/`

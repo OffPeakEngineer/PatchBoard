@@ -66,6 +66,14 @@ func TestDoneStatePrefersConfiguredDoneLane(t *testing.T) {
 	}
 }
 
+func TestStatusJSONUsesEmptyActiveTaskList(t *testing.T) {
+	cfg := testConfig([]string{"0_planning", "1_ready", "2_doing", "3_done"}, []string{"3_done"})
+	status := statusJSON(cfg, tasks.Result{}, map[string][]tasks.Task{}, 0, 0)
+	if status.ActiveTasks == nil {
+		t.Fatal("expected active_tasks to encode as an empty array, not null")
+	}
+}
+
 func testConfig(states, doneStates []string) tasks.Config {
 	return tasks.Config{States: states, DoneStates: doneStates}
 }

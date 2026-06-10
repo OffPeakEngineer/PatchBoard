@@ -159,6 +159,21 @@ func main() {
 			os.Exit(2)
 		}
 		printFixResult(result)
+	case "undo":
+		opts, err := parseUndoArgs(args[1:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		result, err := tasks.Undo(opts.repoRoot, tasks.UndoOptions{Apply: opts.apply})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		printUndoResult(result)
+		if result.Refused {
+			os.Exit(1)
+		}
 	case "status":
 		opts, err := parseJSONRepoArgs("status", args[1:])
 		if err != nil {
@@ -241,6 +256,11 @@ type taskRepoOptions struct {
 type fixOptions struct {
 	repoRoot string
 	dryRun   bool
+}
+
+type undoOptions struct {
+	repoRoot string
+	apply    bool
 }
 
 func runStatus(opts statusOptions) error {
@@ -428,6 +448,25 @@ func parseFixArgs(args []string) (fixOptions, error) {
 	return opts, nil
 }
 
+func parseUndoArgs(args []string) (undoOptions, error) {
+	opts := undoOptions{repoRoot: "."}
+	var filtered []string
+	for _, arg := range args {
+		if arg == "--apply" {
+			opts.apply = true
+			continue
+		}
+		filtered = append(filtered, arg)
+	}
+	if len(filtered) > 1 {
+		return opts, fmt.Errorf("usage: patchboard undo [--apply] [repo-root]")
+	}
+	if len(filtered) == 1 {
+		opts.repoRoot = filtered[0]
+	}
+	return opts, nil
+}
+
 func parseJSONRepoArgs(name string, args []string) (jsonRepoOptions, error) {
 	flags := flag.NewFlagSet(name, flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
@@ -515,6 +554,9 @@ func statusJSON(cfg tasks.Config, result tasks.Result, tasksByState map[string][
 
 	active := activeState(cfg.States)
 	activeTasks := append([]tasks.Task(nil), tasksByState[active]...)
+	if activeTasks == nil {
+		activeTasks = []tasks.Task{}
+	}
 	sortTasks(activeTasks)
 
 	return statusSummary{
@@ -600,6 +642,36 @@ func printFixResult(result tasks.FixResult) {
 	}
 }
 
+func printUndoResult(result tasks.UndoResult) {
+	if result.Apply {
+		fmt.Println("Patchboard undo")
+	} else {
+		fmt.Println("Patchboard undo preview")
+	}
+	fmt.Printf("Repo: %s\n", result.RepoRoot)
+	fmt.Printf("Task root: %s\n", result.TaskRoot)
+	fmt.Println()
+
+	if len(result.Changes) == 0 {
+		fmt.Println("No task-board changes to restore")
+		return
+	}
+	for _, change := range result.Changes {
+		fmt.Printf("%s %s\n", change.Status, change.Path)
+	}
+	fmt.Println()
+	if result.Refused {
+		fmt.Printf("Refused: %s\n", result.RefuseCause)
+		return
+	}
+	if result.Applied {
+		fmt.Println("Restored task-board changes with git.")
+		return
+	}
+	fmt.Printf("To apply: %s\n", strings.Join(result.Command, " "))
+	fmt.Println("Or run: patchboard undo --apply")
+}
+
 func activeState(states []string) string {
 	for _, preferred := range []string{"2_doing", "doing"} {
 		if isState(states, preferred) {
@@ -639,5 +711,5 @@ func isState(states []string, value string) bool {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "Usage: patchboard [status|create|move|start|done|doctor|fix|init|list|lint|todos] [args]")
+	fmt.Fprintln(os.Stderr, "Usage: patchboard [status|create|move|start|done|doctor|fix|undo|init|list|lint|todos] [args]")
 }

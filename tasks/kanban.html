@@ -189,6 +189,7 @@
       <select id="language" aria-label="Language"></select>
       <button id="open" class="primary" data-i18n="openFolder">Open tasks folder</button>
       <button id="refresh" data-i18n="refresh">Refresh</button>
+      <button id="undo" data-i18n="undoMove" hidden>Undo move</button>
     </div>
   </header>
   <div id="status" data-i18n="chooseFolder">Choose this project's tasks folder to load the board.</div>
@@ -204,6 +205,9 @@
         unsupported: "This browser cannot write to local folders from a page. Use Chrome or Edge for drag-and-drop moves.",
         loaded: "Board loaded.",
         moved: "Moved card.",
+        undoMove: "Undo move",
+        undone: "Move undone.",
+        undoUnavailable: "There is no browser move to undo.",
         moveFailed: "Move failed. Check browser permissions and try again.",
         noTasks: "No tasks",
         noStates: "No state folders found.",
@@ -218,6 +222,9 @@
         unsupported: "Este navegador no puede escribir carpetas locales desde una pagina. Usa Chrome o Edge para mover tarjetas.",
         loaded: "Tablero cargado.",
         moved: "Tarjeta movida.",
+        undoMove: "Deshacer movimiento",
+        undone: "Movimiento deshecho.",
+        undoUnavailable: "No hay un movimiento del navegador para deshacer.",
         moveFailed: "No se pudo mover. Revisa los permisos del navegador e intenta de nuevo.",
         noTasks: "Sin tareas",
         noStates: "No se encontraron carpetas de estado.",
@@ -230,6 +237,7 @@
     let rootHandle = null;
     let board = { states: [], tasks: [] };
     let draggedPath = "";
+    let lastMove = null;
 
     const boardEl = document.querySelector("#board");
     const statusEl = document.querySelector("#status");
@@ -238,6 +246,7 @@
     initLanguage();
     document.querySelector("#open").addEventListener("click", openFolder);
     document.querySelector("#refresh").addEventListener("click", refresh);
+    document.querySelector("#undo").addEventListener("click", undoLastMove);
 
     if (!("showDirectoryPicker" in window)) {
       setStatus(t("unsupported"), true);
@@ -462,7 +471,26 @@
 
       try {
         await moveTask(task, targetState);
+        lastMove = { file: task.file, from: task.state, to: targetState };
+        updateUndoButton();
         setStatus(t("moved"));
+        await refresh();
+      } catch (error) {
+        console.error(error);
+        setStatus(t("moveFailed"), true);
+      }
+    }
+
+    async function undoLastMove() {
+      if (!lastMove) {
+        setStatus(t("undoUnavailable"), true);
+        return;
+      }
+      try {
+        await moveTask({ file: lastMove.file, state: lastMove.to }, lastMove.from);
+        lastMove = null;
+        updateUndoButton();
+        setStatus(t("undone"));
         await refresh();
       } catch (error) {
         console.error(error);
@@ -485,6 +513,10 @@
     function setStatus(message, error = false) {
       statusEl.textContent = message;
       statusEl.classList.toggle("error", error);
+    }
+
+    function updateUndoButton() {
+      document.querySelector("#undo").hidden = !lastMove;
     }
   </script>
 </body>
