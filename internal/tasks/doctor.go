@@ -121,15 +121,17 @@ func doctorAction(issue Issue) string {
 	case "TASK003":
 		return "add frontmatter title or a Markdown heading"
 	case "TASK004":
-		return "update frontmatter status to match the containing folder, or remove status"
+		return "remove frontmatter status"
 	case "TASK005":
 		return "rename the file or adjust the filename rule"
 	case "TODO001":
 		return "create the referenced task or update the annotation task id"
 	case "TODO002":
-		return "remove the annotation or move the referenced task out of a done state"
+		return "remove the annotation or move the referenced task out of a done-state folder"
 	case "TODO003":
 		return "keep only one code annotation per task id"
+	case "KANBAN001":
+		return "run patchboard fix to install the current kanban template"
 	default:
 		return "inspect the finding and update the task board"
 	}

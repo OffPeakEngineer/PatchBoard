@@ -1,0 +1,20 @@
+---
+id: {{ .ID }}
+owner: {{ .Owner }}
+tags:
+{{ range .Tags }}  - {{ . }}
+{{ end -}}
+created: {{ .Created }}
+---
+
+# {{ .Title }}
+
+## Problem
+
+Describe what needs to change, and why.
+
+## Done when
+
+- The expected outcome is clear
+- Relevant checks pass
+- The completion path is captured in Git

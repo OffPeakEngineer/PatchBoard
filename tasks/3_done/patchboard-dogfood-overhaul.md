@@ -40,9 +40,8 @@ default lane set should be:
 - `2_doing`
 - `3_done`
 
-Status, priority, and title should be derived from path conventions when they
-can be derived without losing useful context. Durable metadata belongs in
-frontmatter.
+Status and title should be derived from path conventions when they can be
+derived without losing useful context. Durable metadata belongs in frontmatter.
 
 The broader product may later support additional config filenames or formats,
 but this repo should use one canonical board config until that flexibility is
@@ -53,19 +52,28 @@ templates using a simple human-readable format. The template language should be
 easy to inspect and edit; it should not require users to understand regular
 expressions for common board conventions.
 
+## Resolution
+
+The dogfood pass converged on a file-first board that is now reflected in code,
+docs, and Patchboard's own `tasks/` tree:
+
+- Board-local config lives in `tasks/board.yml`.
+- Task files use shell-friendly `slug.md` names.
+- Durable metadata stays in frontmatter.
+- Lane/status comes from the containing folder.
+- `patchboard move`, `patchboard start`, and `patchboard done` perform
+  filesystem movement without mutating task content.
+- `patchboard doctor` explains board health, and `patchboard fix` applies only
+  low-risk mechanical repairs.
+- `patchboard init` installs editable project-local templates, including the
+  zero-install `tasks/kanban.html` board lens.
+
 ## Follow-up Work
 
-- Implement or document the finalized naming convention from the naming task.
-- Decide how permissive filename lint should be for templates and transitional
-  task files.
-- Define which lint findings are warnings, which are errors, and which can be
-  repaired automatically.
-- Decide whether an explicit undo command should wrap Git restoration for safe
-  metadata and movement repairs.
-- Ensure JSON output reports derived fields without presenting them as
-  hand-authored frontmatter.
-- Capture non-blocking findings as follow-up tasks when Patchboard can identify
-  useful next steps.
+- Browser write behavior is captured in `browser-kanban-validation`.
+- Lint follow-up task generation is captured in `lint-follow-up-generation`.
+- Git-backed undo behavior is captured in `undo-command`.
+- Human-readable convention templates are captured in `board-template-language`.
 
 ## Done when
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type InitResult struct {
@@ -48,7 +47,20 @@ func Init(repoRoot string) (InitResult, error) {
 	}
 
 	readme := filepath.Join(taskRoot, "README.md")
-	if err := writeFileIfMissing(readme, taskReadme(cfg), &result); err != nil {
+	readmeContent, err := taskReadme(cfg)
+	if err != nil {
+		return InitResult{}, err
+	}
+	if err := writeFileIfMissing(readme, readmeContent, &result); err != nil {
+		return InitResult{}, err
+	}
+
+	kanban := filepath.Join(taskRoot, "kanban.html")
+	kanbanContent, err := templateFile("kanban.html")
+	if err != nil {
+		return InitResult{}, err
+	}
+	if err := writeFileIfMissing(kanban, kanbanContent, &result); err != nil {
 		return InitResult{}, err
 	}
 
@@ -88,58 +100,10 @@ func writeFileIfMissing(path, content string, result *InitResult) error {
 	return nil
 }
 
-func taskReadme(cfg Config) string {
-	var states strings.Builder
-	for _, state := range cfg.States {
-		fmt.Fprintf(&states, "- `%s/`\n", state)
-	}
-
-	return fmt.Sprintf(`# Tasks
-
-This folder is a Patchboard task board. Tasks are Markdown files, and the
-folder containing a task is its workflow state.
-
-## States
-
-%s
-Move a task file between folders to change its state. Git history is the audit
-trail.
-
-## Task Shape
-
-~~~markdown
----
-id: task-YYYYMMDD-short-name
-owner: your-name
-created: YYYY-MM-DD
----
-
-# Short, concrete task title
-
-## Problem
-
-What needs to change, and why?
-
-## Done when
-
-- The expected behavior is implemented
-- Relevant tests or checks pass
-~~~
-
-Frontmatter stores durable task metadata. The folder is authoritative for
-status, and title/priority may be derived from the filename or Markdown content
-according to the board convention.
-
-## Code Annotations
-
-Link code comments back to tasks with square brackets:
-
-~~~text
-TODO[task-YYYYMMDD-short-name]: describe the follow-up
-FIXME[task-YYYYMMDD-short-name]: describe the known problem
-~~~
-
-Unlinked annotations such as `+"`TODO:`"+`, `+"`XXX:`"+`, and `+"`WARN:`"+` are useful inventory,
-but they do not fail lint until they reference a task ID.
-`, states.String())
+func taskReadme(cfg Config) (string, error) {
+	return renderTemplate("README.md.tmpl", struct {
+		States []string
+	}{
+		States: cfg.States,
+	})
 }

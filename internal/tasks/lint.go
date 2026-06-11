@@ -1,7 +1,9 @@
 package tasks
 
 import (
+	"bytes"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -27,6 +29,7 @@ func Lint(repoRoot string) (Result, error) {
 	}
 	result.Issues = append(result.Issues, lintTasks(taskList, cfg)...)
 	result.Issues = append(result.Issues, lintTodos(taskList, todoList, cfg)...)
+	result.Issues = append(result.Issues, lintTemplateFiles(root, cfg)...)
 	return result, nil
 }
 
@@ -45,8 +48,7 @@ func nonNilAnnotations(todoList []Annotation) []Annotation {
 }
 
 // lintTasks validates the Markdown task board itself. The folder name is the
-// canonical task state, so frontmatter status is treated as a cached copy that
-// must agree with the filesystem.
+// canonical task state, so frontmatter status is invalid derived metadata.
 func lintTasks(taskList []Task, cfg Config) []Issue {
 	var issues []Issue
 	seenIDs := map[string]Task{}
@@ -79,12 +81,12 @@ func lintTasks(taskList []Task, cfg Config) []Issue {
 			})
 		}
 
-		if task.FrontmatterStat != "" && task.FrontmatterStat != task.State {
+		if task.FrontmatterStat != "" {
 			issues = append(issues, Issue{
 				Severity: "error",
 				Code:     "TASK004",
 				Path:     task.Path,
-				Message:  fmt.Sprintf("status mismatch: file is in %q but frontmatter says %q", task.State, task.FrontmatterStat),
+				Message:  "frontmatter status is derived from the containing folder; remove it",
 			})
 		}
 
@@ -160,4 +162,43 @@ func lintTodos(taskList []Task, todoList []Annotation, cfg Config) []Issue {
 	}
 
 	return issues
+}
+
+func lintTemplateFiles(root string, cfg Config) []Issue {
+	kanbanPath := filepath.Join(root, cfg.TaskRoot, "kanban.html")
+	expected, err := templateFile("kanban.html")
+	if err != nil {
+		return []Issue{{
+			Severity: "error",
+			Code:     "KANBAN001",
+			Path:     filepath.ToSlash(filepath.Join(cfg.TaskRoot, "kanban.html")),
+			Message:  fmt.Sprintf("kanban template cannot be loaded: %v", err),
+		}}
+	}
+	actual, err := os.ReadFile(kanbanPath)
+	if os.IsNotExist(err) {
+		return []Issue{{
+			Severity: "warning",
+			Code:     "KANBAN001",
+			Path:     filepath.ToSlash(filepath.Join(cfg.TaskRoot, "kanban.html")),
+			Message:  "kanban.html is missing; run patchboard fix to install it",
+		}}
+	}
+	if err != nil {
+		return []Issue{{
+			Severity: "error",
+			Code:     "KANBAN001",
+			Path:     filepath.ToSlash(filepath.Join(cfg.TaskRoot, "kanban.html")),
+			Message:  fmt.Sprintf("kanban.html cannot be read: %v", err),
+		}}
+	}
+	if !bytes.Equal(actual, []byte(expected)) {
+		return []Issue{{
+			Severity: "warning",
+			Code:     "KANBAN001",
+			Path:     filepath.ToSlash(filepath.Join(cfg.TaskRoot, "kanban.html")),
+			Message:  "kanban.html differs from the installed Patchboard template; run patchboard fix to update it",
+		}}
+	}
+	return nil
 }

@@ -1,0 +1,58 @@
+# Tasks
+
+This folder is a Patchboard task board. Tasks are Markdown files, and the
+folder containing a task is its workflow state.
+
+The board is a durable planning surface for this repository. Product context,
+technical notes, and implementation follow-up should stay readable here even if
+the Patchboard binary is not installed. Git history is the audit trail for how
+the plan moved.
+
+## States
+
+{{ range .States -}}
+- `{{ . }}/`
+{{ end }}
+Move a task file between folders to change its state. Git history is the audit
+trail.
+
+Open `kanban.html` in a browser for a visual board. Browsers with local
+directory write support can move cards between state folders directly; other
+browsers can still use it as a read-only board.
+
+## Task Shape
+
+~~~markdown
+---
+id: task-YYYYMMDD-short-name
+owner: your-name
+created: YYYY-MM-DD
+---
+
+# Short, concrete task title
+
+## Problem
+
+What needs to change, and why?
+
+## Done when
+
+- The expected behavior is implemented
+- Relevant tests or checks pass
+~~~
+
+Frontmatter stores durable task metadata. The folder is authoritative for
+status, and the title may be derived from the filename or Markdown content
+according to the board convention.
+
+## Code Annotations
+
+Link code comments back to tasks with square brackets:
+
+~~~text
+TODO[task-YYYYMMDD-short-name]: describe the follow-up
+FIXME[task-YYYYMMDD-short-name]: describe the known problem
+~~~
+
+Unlinked annotations such as `TODO:`, `XXX:`, and `WARN:` are useful inventory,
+but they do not fail lint until they reference a task ID.

@@ -21,7 +21,7 @@ the JSON shape must make that distinction clear.
 ## Done when
 
 - Status, list, lint, and todos can emit JSON
-- JSON includes derived fields such as lane/status, priority, and title without
+- JSON includes derived fields such as lane/status and title without
   pretending they were hand-authored frontmatter
 - JSON includes enough source information for callers to tell whether a field
   came from frontmatter, the file path, or board configuration

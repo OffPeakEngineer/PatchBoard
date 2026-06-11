@@ -1,6 +1,6 @@
 module ledoerr/patchboard
 
-go 1.26
+go 1.22
 
 require sigs.k8s.io/yaml v1.6.0
 
