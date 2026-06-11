@@ -9,7 +9,7 @@ import (
 
 func TestUndoPreviewsAndRestoresTrackedTaskChanges(t *testing.T) {
 	root := gitRepo(t)
-	writeFile(t, root, "tasks/ready/fix-login.md", `---
+	writeFile(t, root, "tasks/1_ready/fix-login.md", `---
 id: task-auth
 ---
 
@@ -18,7 +18,7 @@ id: task-auth
 	git(t, root, "add", ".")
 	git(t, root, "-c", "user.name=Patchboard", "-c", "user.email=patchboard@example.invalid", "commit", "-m", "initial")
 
-	if _, err := Move(root, MoveOptions{Task: "fix-login", State: "done"}); err != nil {
+	if _, err := Move(root, MoveOptions{Task: "fix-login", State: "3_done"}); err != nil {
 		t.Fatalf("Move returned error: %v", err)
 	}
 
@@ -29,7 +29,7 @@ id: task-auth
 	if preview.Applied || len(preview.Changes) == 0 {
 		t.Fatalf("expected unapplied preview with changes, got %#v", preview)
 	}
-	assertPathExists(t, root, "tasks", "done", "fix-login.md")
+	assertPathExists(t, root, "tasks", "3_done", "fix-login.md")
 
 	applied, err := Undo(root, UndoOptions{Apply: true})
 	if err != nil {
@@ -38,18 +38,18 @@ id: task-auth
 	if !applied.Applied {
 		t.Fatalf("expected undo to apply, got %#v", applied)
 	}
-	assertPathExists(t, root, "tasks", "ready", "fix-login.md")
-	if _, err := os.Stat(filepath.Join(root, "tasks", "done", "fix-login.md")); !os.IsNotExist(err) {
+	assertPathExists(t, root, "tasks", "1_ready", "fix-login.md")
+	if _, err := os.Stat(filepath.Join(root, "tasks", "3_done", "fix-login.md")); !os.IsNotExist(err) {
 		t.Fatalf("expected moved path to be restored away, got %v", err)
 	}
 }
 
 func TestUndoRefusesUntrackedTaskFiles(t *testing.T) {
 	root := gitRepo(t)
-	writeFile(t, root, "tasks/ready/.gitkeep", "")
+	writeFile(t, root, "tasks/1_ready/.gitkeep", "")
 	git(t, root, "add", ".")
 	git(t, root, "-c", "user.name=Patchboard", "-c", "user.email=patchboard@example.invalid", "commit", "-m", "initial")
-	writeFile(t, root, "tasks/ready/new-task.md", "# New task\n")
+	writeFile(t, root, "tasks/1_ready/new-task.md", "# New task\n")
 
 	result, err := Undo(root, UndoOptions{Apply: true})
 	if err != nil {
@@ -58,7 +58,7 @@ func TestUndoRefusesUntrackedTaskFiles(t *testing.T) {
 	if !result.Refused || result.Applied {
 		t.Fatalf("expected undo to refuse untracked task files, got %#v", result)
 	}
-	assertPathExists(t, root, "tasks", "ready", "new-task.md")
+	assertPathExists(t, root, "tasks", "1_ready", "new-task.md")
 }
 
 func gitRepo(t *testing.T) string {

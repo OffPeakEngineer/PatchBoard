@@ -82,22 +82,21 @@ That creates:
 tasks/
   README.md
   kanban.html
-  backlog/
-  ready/
-  doing/
-  blocked/
-  done/
-  archived/
+  -1_anti-feature/
+  0_planning/
+  1_ready/
+  2_doing/
+  3_done/
 ```
 
-Then run:
+Common commands:
 
 ```bash
 patchboard
 patchboard doctor
 patchboard list
 patchboard list --json 2_doing
-patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling"
+patchboard create --state 1_ready --slug fix-login-timeout --title "Fix login timeout handling"
 patchboard start fix-login-timeout
 patchboard done fix-login-timeout
 patchboard fix --dry-run
@@ -111,41 +110,52 @@ You can also open `tasks/kanban.html` in a browser for a visual board. Browsers
 with local directory write support can move cards between state folders after
 you choose the project `tasks/` directory.
 
-During development, you can run the tool without installing it:
+Command notes:
+
+- `patchboard` and `patchboard status` summarize board health.
+- `doctor` explains setup and lint findings.
+- `list [state]` lists tasks, optionally narrowed to one workflow state.
+- `create` writes a new task file from command-line fields.
+- `move <task> <state>` moves a task between workflow states.
+- `start <task>` moves a task to the active state.
+- `done <task>` moves a task to the primary done state.
+- `fix --dry-run` previews safe mechanical repairs.
+- `undo` previews task-board changes that Git can restore.
+- `lint` validates task files and linked code annotations.
+- `todos` lists code annotations found across the repo.
+- `--json` emits structured output for `status`, `list`, `lint`, and `todos`.
+- Most commands accept an optional final repo path when Patchboard is run from
+  outside the repo that owns `tasks/`.
+
+During development, you can run the tool without installing it. From a repo that
+has Patchboard checked out at `./patchboard`, target the parent repo with `..`:
 
 ```bash
-go run ./cmd/patchboard init
-go run ./cmd/patchboard status
-go run ./cmd/patchboard doctor
-go run ./cmd/patchboard list
-go run ./cmd/patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling"
-go run ./cmd/patchboard move fix-login-timeout doing
-go run ./cmd/patchboard fix --dry-run
-go run ./cmd/patchboard undo
-go run ./cmd/patchboard lint
+go -C patchboard run . status ..
+go -C patchboard run . doctor ..
+go -C patchboard run . list 2_doing ..
+go -C patchboard run . create --state 1_ready --slug fix-login-timeout --title "Fix login timeout handling" ..
+go -C patchboard run . move fix-login-timeout 2_doing ..
+go -C patchboard run . fix --dry-run ..
+go -C patchboard run . undo ..
 ```
 
-If Patchboard is checked out as a submodule, target the parent repo explicitly:
+If you are working inside the Patchboard source repo itself, the shorter form
+works against this repo's own `tasks/` folder:
 
 ```bash
-go -C patchboard run ./cmd/patchboard init ..
-go -C patchboard run ./cmd/patchboard status ..
-go -C patchboard run ./cmd/patchboard doctor ..
-go -C patchboard run ./cmd/patchboard list ready ..
-go -C patchboard run ./cmd/patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling" ..
-go -C patchboard run ./cmd/patchboard move fix-login-timeout doing ..
-go -C patchboard run ./cmd/patchboard fix --dry-run ..
-go -C patchboard run ./cmd/patchboard undo ..
-go -C patchboard run ./cmd/patchboard lint ..
-go -C patchboard run ./cmd/patchboard todos ..
+go run .
+go run . lint
 ```
+
+You can also build the CLI from a fresh clone with `go build .`.
 
 ## Task Files
 
 A task is a Markdown file under one of the state folders:
 
 ```text
-tasks/doing/fix-login-timeout.md
+tasks/2_doing/fix-login-timeout.md
 ```
 
 The parent folder is the authoritative workflow state. Frontmatter is optional,
@@ -181,11 +191,11 @@ Identity rules:
   otherwise the filename slug. New tasks should prefer a Markdown heading.
 - Task state: parent folder under `tasks/`
 
-Because the folder is authoritative, frontmatter status is redundant. If a
-legacy task includes it, this is invalid:
+Because the folder is authoritative, frontmatter status is redundant. Do not
+write this:
 
 ```text
-tasks/done/fix-login-timeout.md
+tasks/3_done/fix-login-timeout.md
 ```
 
 ```yaml
@@ -222,10 +232,6 @@ TODO (dave): follow up
 WARN (@andy): check before deploy
 ```
 
-Older `TODO(task-id): message` style is accepted when the value looks like an
-ID, but new linked annotations should use brackets. That keeps task IDs distinct
-from owners.
-
 Default markers:
 
 - `TODO`
@@ -253,17 +259,17 @@ Unlinked annotations are listed by `patchboard todos`, but they do not fail
 - `TASK001`: unknown state folder
 - `TASK002`: duplicate task ID
 - `TASK003`: missing title
-- `TASK004`: frontmatter `status` does not match the folder
+- `TASK004`: frontmatter `status` is present
 - `TASK005`: filename does not match the configured filename pattern
 - `TODO001`: code annotation references a missing task
-- `TODO002`: code annotation references a done or archived task
+- `TODO002`: code annotation references a done-state task
 - `TODO003`: duplicate annotation task ID in code
 
 ## Configuration
 
 Patchboard works without configuration. Repos can opt into local conventions
-with `tasks/board.yml`, `tasks/board.yaml`, or `tasks/board.json`. Keeping the
-config under `tasks/` keeps board metadata near the board it describes:
+with `tasks/board.yml`. Keeping the config under `tasks/` keeps board metadata
+near the board it describes:
 
 ```yaml
 task_root: tasks
@@ -281,26 +287,6 @@ filename:
   pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*\\.md$"
   description: "slug.md"
   severity: warning
-```
-
-Legacy root config files named `.patchboard.yaml`, `.patchboard.yml`, or
-`.patchboard.json` are still supported for existing repos. Board-local config
-takes precedence when both are present.
-
-JSON is also supported for projects that prefer it:
-
-```json
-{
-  "task_root": "tasks",
-  "states": ["-1_anti-feature", "0_planning", "1_ready", "2_doing", "3_done"],
-  "done_states": ["-1_anti-feature", "3_done"],
-  "filename": {
-    "enabled": true,
-    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*\\.md$",
-    "description": "slug.md",
-    "severity": "warning"
-  }
-}
 ```
 
 Use filename lint as a kindness, not a trap. A project manager who only lives
@@ -342,21 +328,20 @@ Exit codes:
 
 ## Built-in Defaults
 
-Patchboard still works without config. The built-in defaults remain generic so
-existing repos can opt in without learning a naming scheme first:
+Patchboard still works without config. The built-in defaults match the standard
+Patchboard board shape:
 
 ```yaml
 task_root: tasks
 states:
-  - backlog
-  - ready
-  - doing
-  - blocked
-  - done
-  - archived
+  - -1_anti-feature
+  - 0_planning
+  - 1_ready
+  - 2_doing
+  - 3_done
 done_states:
-  - done
-  - archived
+  - -1_anti-feature
+  - 3_done
 ignore_dirs:
   - .git
   - node_modules
