@@ -105,7 +105,7 @@ func addScaffoldFixes(root string, cfg Config, result *FixResult) error {
 	if err != nil {
 		return err
 	}
-	return addFileFix(filepath.Join(taskRoot, "kanban.html"), kanbanContent, "FIX_KANBAN", "install missing kanban.html", result)
+	return addTemplateFileFix(filepath.Join(taskRoot, "kanban.html"), kanbanContent, "FIX_KANBAN", "install or update kanban.html from template", result)
 }
 
 func addMkdirFix(path, code, message string, result *FixResult) (bool, error) {
@@ -137,6 +137,33 @@ func addFileFix(path, content, code, message string, result *FixResult) error {
 	if _, err := os.Stat(path); err == nil {
 		return nil
 	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	operation := FixOperation{
+		Code:    code,
+		Path:    filepath.ToSlash(path),
+		Message: message,
+		Applied: !result.DryRun,
+	}
+	if !result.DryRun {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			return err
+		}
+	}
+	result.Operations = append(result.Operations, operation)
+	return nil
+}
+
+func addTemplateFileFix(path, content, code, message string, result *FixResult) error {
+	actual, err := os.ReadFile(path)
+	if err == nil && bytes.Equal(actual, []byte(content)) {
+		return nil
+	}
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 

@@ -206,6 +206,69 @@ id: task-board-config
 	}
 }
 
+func TestLintWarnsWhenKanbanTemplateDrifts(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "tasks/ready/task.md", `---
+id: task-board-config
+---
+
+# Board config
+`)
+	writeFile(t, root, "tasks/kanban.html", "<!doctype html><title>custom</title>\n")
+
+	result, err := Lint(root)
+	if err != nil {
+		t.Fatalf("Lint returned error: %v", err)
+	}
+	if !hasIssue(result, "KANBAN001") {
+		t.Fatalf("expected KANBAN001, got %#v", result.Issues)
+	}
+	if result.HasErrors() {
+		t.Fatalf("expected kanban drift warning not to fail lint, got %#v", result.Issues)
+	}
+}
+
+func TestLintWarnsWhenKanbanTemplateIsMissing(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "tasks/ready/task.md", `---
+id: task-board-config
+---
+
+# Board config
+`)
+
+	result, err := Lint(root)
+	if err != nil {
+		t.Fatalf("Lint returned error: %v", err)
+	}
+	if !hasIssue(result, "KANBAN001") {
+		t.Fatalf("expected KANBAN001, got %#v", result.Issues)
+	}
+}
+
+func TestLintAcceptsInstalledKanbanTemplate(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "tasks/ready/task.md", `---
+id: task-board-config
+---
+
+# Board config
+`)
+	kanban, err := templateFile("kanban.html")
+	if err != nil {
+		t.Fatalf("loading template: %v", err)
+	}
+	writeFile(t, root, "tasks/kanban.html", kanban)
+
+	result, err := Lint(root)
+	if err != nil {
+		t.Fatalf("Lint returned error: %v", err)
+	}
+	if hasIssue(result, "KANBAN001") {
+		t.Fatalf("expected installed kanban template to be clean, got %#v", result.Issues)
+	}
+}
+
 func TestInitCreatesDefaultTaskBoardWithoutOverwriting(t *testing.T) {
 	root := t.TempDir()
 

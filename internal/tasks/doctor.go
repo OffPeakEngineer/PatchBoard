@@ -130,6 +130,8 @@ func doctorAction(issue Issue) string {
 		return "remove the annotation or move the referenced task out of a done state"
 	case "TODO003":
 		return "keep only one code annotation per task id"
+	case "KANBAN001":
+		return "run patchboard fix to install the current kanban template"
 	default:
 		return "inspect the finding and update the task board"
 	}

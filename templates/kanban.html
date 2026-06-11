@@ -173,6 +173,22 @@
       font-size: 12px;
     }
 
+    .card-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .file-link {
+      min-height: 28px;
+      padding: 3px 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 12px;
+    }
+
     .empty {
       padding: 12px;
       color: var(--muted);
@@ -190,6 +206,7 @@
       <button id="open" class="primary" data-i18n="openFolder">Open tasks folder</button>
       <button id="refresh" data-i18n="refresh">Refresh</button>
       <button id="undo" data-i18n="undoMove" hidden>Undo move</button>
+      <button id="install" data-i18n="installApp">Install app</button>
     </div>
   </header>
   <div id="status" data-i18n="chooseFolder">Choose this project's tasks folder to load the board.</div>
@@ -208,11 +225,15 @@
         undoMove: "Undo move",
         undone: "Move undone.",
         undoUnavailable: "There is no browser move to undo.",
+        installApp: "Install app",
+        installUnavailable: "Install is available only when the browser exposes an app install prompt for this page.",
+        localFileHint: "This board was opened from a local file. Choose this tasks folder once so the browser can grant access.",
         moveFailed: "Move failed. Check browser permissions and try again.",
         noTasks: "No tasks",
         noStates: "No state folders found.",
         cardId: "ID",
-        file: "File"
+        file: "File",
+        openFile: "Open"
       },
       es: {
         appTitle: "Patchboard",
@@ -225,11 +246,15 @@
         undoMove: "Deshacer movimiento",
         undone: "Movimiento deshecho.",
         undoUnavailable: "No hay un movimiento del navegador para deshacer.",
+        installApp: "Instalar app",
+        installUnavailable: "La instalacion solo esta disponible cuando el navegador muestra una opcion para instalar esta pagina.",
+        localFileHint: "Este tablero se abrio desde un archivo local. Elige esta carpeta de tareas una vez para dar acceso al navegador.",
         moveFailed: "No se pudo mover. Revisa los permisos del navegador e intenta de nuevo.",
         noTasks: "Sin tareas",
         noStates: "No se encontraron carpetas de estado.",
         cardId: "ID",
-        file: "Archivo"
+        file: "Archivo",
+        openFile: "Abrir"
       }
     };
 
@@ -238,6 +263,7 @@
     let board = { states: [], tasks: [] };
     let draggedPath = "";
     let lastMove = null;
+    let installPrompt = null;
 
     const boardEl = document.querySelector("#board");
     const statusEl = document.querySelector("#status");
@@ -247,9 +273,16 @@
     document.querySelector("#open").addEventListener("click", openFolder);
     document.querySelector("#refresh").addEventListener("click", refresh);
     document.querySelector("#undo").addEventListener("click", undoLastMove);
+    document.querySelector("#install").addEventListener("click", installApp);
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      installPrompt = event;
+    });
 
     if (!("showDirectoryPicker" in window)) {
       setStatus(t("unsupported"), true);
+    } else if (window.location.protocol === "file:") {
+      setStatus(t("localFileHint"));
     }
 
     function pickLanguage() {
@@ -367,7 +400,8 @@
         title,
         state,
         file,
-        path: `${state}/${file}`
+        path: `${state}/${file}`,
+        href: encodeURI(`${state}/${file}`)
       };
     }
 
@@ -439,6 +473,10 @@
       el.addEventListener("dragstart", () => {
         draggedPath = task.path;
       });
+      el.addEventListener("dblclick", (event) => {
+        if (event.target.closest("a")) return;
+        window.open(task.href, "_blank", "noopener");
+      });
 
       const title = document.createElement("div");
       title.className = "title";
@@ -446,7 +484,16 @@
       const meta = document.createElement("div");
       meta.className = "meta";
       meta.append(metaItem(t("cardId"), task.id), metaItem(t("file"), task.file));
-      el.append(title, meta);
+      const actions = document.createElement("div");
+      actions.className = "card-actions";
+      const link = document.createElement("a");
+      link.className = "file-link";
+      link.href = task.href;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = t("openFile");
+      actions.append(link);
+      el.append(title, meta, actions);
       return el;
     }
 
@@ -508,6 +555,16 @@
       await writable.write(await file.arrayBuffer());
       await writable.close();
       await fromDir.removeEntry(task.file);
+    }
+
+    async function installApp() {
+      if (!installPrompt) {
+        setStatus(t("installUnavailable"), true);
+        return;
+      }
+      installPrompt.prompt();
+      await installPrompt.userChoice;
+      installPrompt = null;
     }
 
     function setStatus(message, error = false) {

@@ -122,6 +122,32 @@ status: done
 	}
 }
 
+func TestFixUpdatesDriftedKanbanTemplate(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "tasks/ready/.gitkeep", "")
+	writeFile(t, root, "tasks/kanban.html", "<!doctype html><title>custom</title>\n")
+
+	result, err := Fix(root, FixOptions{})
+	if err != nil {
+		t.Fatalf("Fix returned error: %v", err)
+	}
+	if !hasFixOperation(result, "FIX_KANBAN") {
+		t.Fatalf("expected FIX_KANBAN, got %#v", result.Operations)
+	}
+
+	kanban, err := templateFile("kanban.html")
+	if err != nil {
+		t.Fatalf("loading template: %v", err)
+	}
+	body, err := os.ReadFile(filepath.Join(root, "tasks", "kanban.html"))
+	if err != nil {
+		t.Fatalf("reading kanban: %v", err)
+	}
+	if string(body) != kanban {
+		t.Fatal("expected fix to update kanban from template")
+	}
+}
+
 func hasDoctorFinding(result DoctorResult, code string) bool {
 	for _, finding := range result.Findings {
 		if finding.Code == code {

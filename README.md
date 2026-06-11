@@ -314,6 +314,10 @@ removing redundant frontmatter `status` fields. Ambiguous repairs, such as
 renaming task files or choosing a state for loose task files, remain doctor
 guidance for a human to decide.
 
+`patchboard lint` warns when `tasks/kanban.html` is missing or has drifted from
+the bundled template. `patchboard fix` installs or updates that file while still
+leaving task Markdown as the source of truth.
+
 `patchboard undo` previews task-board changes that Git can restore.
 `patchboard undo --apply` delegates to native `git restore` and refuses to run
 while unrelated untracked task files are present. For a browser-only workflow,
