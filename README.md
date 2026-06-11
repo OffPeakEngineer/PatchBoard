@@ -53,6 +53,16 @@ Patchboard is early. The current useful pieces are:
 - `patchboard todos`: list code annotations found across the repo
 - `--json`: emit structured output for `status`, `list`, `lint`, and `todos`
 
+CI
+
+This repository runs CI in tandem: existing GitHub Actions workflows remain
+under `.github/workflows/`, and a GitLab CI pipeline was added at
+`.gitlab-ci.yml` to provide parallel builds on GitLab. Some GitHub-specific
+automation (for example, GitHub-only release helpers) are kept on the
+GitHub side; the GitLab pipeline mirrors the build/test/release flow where
+possible. Set the same secrets in your GitLab project CI variables for
+release jobs.
+
 Planned but not built yet:
 
 - lint follow-up task generation

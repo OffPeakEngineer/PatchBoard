@@ -1,0 +1,66 @@
+stages:
+  - test
+  - build
+  - release
+
+variables:
+  GOCACHE: "$CI_PROJECT_DIR/.cache/go-build"
+  GOMODCACHE: "$GOCACHE/pkg/mod"
+
+cache:
+  paths:
+    - .cache/go-build
+    - $GOMODCACHE
+
+test:
+  stage: test
+  parallel:
+    matrix:
+      - GO_VERSION: "1.22"
+      - GO_VERSION: "1.21"
+  image: golang:${GO_VERSION}
+  script:
+    - mkdir -p "$GOCACHE"
+    - export GOMODCACHE=$(go env GOMODCACHE)
+    - go mod download
+    - go test ./... -v
+  except:
+    - tags
+
+build:
+  stage: build
+  image: golang:1.22
+  parallel:
+    matrix:
+      - TARGET: "linux_amd64"
+      - TARGET: "darwin_amd64"
+      - TARGET: "windows_amd64"
+  before_script:
+    - mkdir -p build
+  script:
+    - IFS=_ read -r GOOS GOARCH <<< "$TARGET"
+    - echo "Building for $GOOS/$GOARCH"
+    - GOOS=$GOOS GOARCH=$GOARCH go build -v -o build/patchboard-${GOOS}-${GOARCH} ./cmd/patchboard
+  artifacts:
+    paths:
+      - build/
+    expire_in: 1 week
+
+release:
+  stage: release
+  image: goreleaser/goreleaser:latest
+  only:
+    - tags
+  script:
+    - goreleaser release --rm-dist
+  variables:
+    # Map tokens from GitLab CI settings. Define these in GitLab project CI variables.
+    GITHUB_TOKEN: $GITHUB_TOKEN
+    AUR_TOKEN: $AUR_TOKEN
+    SNAPCRAFT_TOKEN: $SNAPCRAFT_TOKEN
+    HOMEBREW_TOKEN: $HOMEBREW_TOKEN
+    SCOOP_TOKEN: $SCOOP_TOKEN
+    CHOCOLATEY_API_KEY: $CHOCOLATEY_API_KEY
+    WINGET_TOKEN: $WINGET_TOKEN
+    NIX_TOKEN: $NIX_TOKEN
+    GPG_PRIVATE_KEY: $GPG_PRIVATE_KEY
