@@ -17,11 +17,9 @@ test:
   parallel:
     matrix:
       - GO_VERSION: "1.22"
-      - GO_VERSION: "1.21"
   image: golang:${GO_VERSION}
   script:
-    - mkdir -p "$GOCACHE"
-    - export GOMODCACHE=$(go env GOMODCACHE)
+    - mkdir -p "$GOCACHE" "$GOMODCACHE"
     - go mod download
     - go test ./... -v
   except:
