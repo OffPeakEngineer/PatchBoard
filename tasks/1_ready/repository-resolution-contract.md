@@ -48,5 +48,8 @@ small, documented precedence contract before their implementation changes.
 
 - Should a directory outside Git still use upward `tasks/` discovery, operate
   only on the current directory, or require an explicit target?
+  - Answer: If a tasks/ folder exists, but not in a git repo, that is fine; if not in a git repo, and no tasks/ folder, then it should show an error; If there is no git repo, and no task folder, then the init command should still work with a "force" flag or something, but show a warning.
 - Should both `-C` and `--repo` be supported as names for the same option?
+  - Answer: sure, if it's a probelm later we can pivot
 - Should `status` always display the selected root, or only under `--verbose`?
+  - similar to 'git status' it will tell you what folder you're looking at unless you give it a 'short' and then it would talk about tickets (for downstream cli piping)
