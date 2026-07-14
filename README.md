@@ -1,402 +1,113 @@
-# Patchboard
+# PatchBoard
 
-Patchboard is a small, repo-native task board and annotation linter.
+PatchBoard is a small, opinionated, repo-native task board and annotation
+linter.
 
 Tasks are Markdown files. Folders are workflow states. Git history is the audit
-trail. The tool should make the system easier to use, but the files must stay
-readable and meaningful if the binary disappears.
+trail. The tool makes that system easier to use, but the files remain readable
+and meaningful if the binary disappears.
 
-## Why Patchboard
+## Why PatchBoard
 
-Patchboard gives a team a task board that lives in the same place as the work.
-Instead of copying status between a ticket system, a spreadsheet, and a repo,
-the board is ordinary Markdown files under `tasks/`. Moving a task is a file
-move. Editing a task is a normal text edit. Reviewing how the plan changed is a
-normal Git history question.
+Product plans and implementation reality often drift apart. A feature may be
+marked complete while its code still contains a `TODO`, `FIXME`, or other known
+follow-up that never reaches the people planning the work.
 
-That makes the board accessible from two directions:
+PatchBoard keeps both sides close to the repository:
 
-- Product and project collaborators can open `tasks/kanban.html` and see a
+- Product and project collaborators can open `tasks/kanban.html` and use a
   familiar board.
-- Engineering collaborators can use the CLI, shell, Vim, Git, and code review
-  without leaving the repo-native workflow.
+- Engineering collaborators can use Markdown, the CLI, Git, code review, and
+  their existing editor.
+- Linked code annotations are checked against the same task files that describe
+  feature and maintenance work.
 
-Patchboard is intentionally not a database. The durable record is the file tree,
-and the tool is there to make that tree easier to inspect, repair, and automate.
+PatchBoard is intentionally not a database. The durable record is the file
+tree, and the tool helps inspect, repair, and automate it.
 
-## Who Should Use This
+## Who It Is For
 
-Patchboard fits small product, design, infrastructure, and engineering teams
+PatchBoard fits small product, design, infrastructure, and engineering teams
 that want planning context close to implementation context. It is especially
-useful when work needs to remain legible in pull requests, local checkouts,
-offline clones, or long-lived repositories.
+useful when work must remain legible in pull requests, local checkouts, offline
+clones, or long-lived repositories.
 
-It is not trying to replace full portfolio planning, customer support queues, or
-company-wide reporting systems. It works best as the repo-local layer of truth:
-the concrete plan for what this repository is doing next.
-
-## Status
-
-Patchboard is early. The current useful pieces are:
-
-- `patchboard` or `patchboard status`: summarize board health
-- `patchboard init`: create the default task board folders and `tasks/kanban.html`
-- `patchboard create`: create a task file from command-line fields
-- `patchboard move`: move a task file between configured states
-- `patchboard start`: move a task to the active state
-- `patchboard done`: move a task to the primary done state
-- `patchboard doctor`: explain board setup and lint findings
-- `patchboard fix`: apply safe mechanical board repairs
-- `patchboard undo`: preview or restore task-board changes with Git
-- `patchboard list`: list tasks by workflow state
-- `patchboard lint`: validate task files and linked code annotations
-- `patchboard todos`: list code annotations found across the repo
-- `--json`: emit structured output for `status`, `list`, `lint`, and `todos`
-
-CI
-
-This repository runs CI in tandem: existing GitHub Actions workflows remain
-under `.github/workflows/`, and a GitLab CI pipeline was added at
-`.gitlab-ci.yml` to provide parallel builds on GitLab. Some GitHub-specific
-automation (for example, GitHub-only release helpers) are kept on the
-GitHub side; the GitLab pipeline mirrors the build/test/release flow where
-possible. Set the same secrets in your GitLab project CI variables for
-release jobs.
-
-Planned but not built yet:
-
-- lint follow-up task generation
-- broader browser support for writable kanban moves
+It is not intended to replace portfolio planning, customer-support queues, or
+company-wide reporting. It works best as the repo-local layer of truth: the
+concrete plan for what this repository is doing next.
 
 ## Quick Start
 
-Initialize a task board in your repo:
+Initialize a board and inspect it:
 
 ```bash
 patchboard init
+patchboard status
+patchboard doctor
 ```
 
-That creates:
-
-```text
-tasks/
-  README.md
-  kanban.html
-  backlog/
-  ready/
-  doing/
-  blocked/
-  done/
-  archived/
-```
-
-Then run:
+Create a task, move it into active work, and finish it:
 
 ```bash
-patchboard
-patchboard doctor
-patchboard list
-patchboard list --json 2_doing
 patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling"
 patchboard start fix-login-timeout
 patchboard done fix-login-timeout
-patchboard fix --dry-run
-patchboard undo
-patchboard lint
-patchboard lint --json
-patchboard todos
 ```
 
-You can also open `tasks/kanban.html` in a browser for a visual board. Browsers
-with local directory write support can move cards between state folders after
-you choose the project `tasks/` directory.
-
-During development, you can run the tool without installing it:
-
-```bash
-go run ./cmd/patchboard init
-go run ./cmd/patchboard status
-go run ./cmd/patchboard doctor
-go run ./cmd/patchboard list
-go run ./cmd/patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling"
-go run ./cmd/patchboard move fix-login-timeout doing
-go run ./cmd/patchboard fix --dry-run
-go run ./cmd/patchboard undo
-go run ./cmd/patchboard lint
-```
-
-If Patchboard is checked out as a submodule, target the parent repo explicitly:
-
-```bash
-go -C patchboard run ./cmd/patchboard init ..
-go -C patchboard run ./cmd/patchboard status ..
-go -C patchboard run ./cmd/patchboard doctor ..
-go -C patchboard run ./cmd/patchboard list ready ..
-go -C patchboard run ./cmd/patchboard create --state ready --slug fix-login-timeout --title "Fix login timeout handling" ..
-go -C patchboard run ./cmd/patchboard move fix-login-timeout doing ..
-go -C patchboard run ./cmd/patchboard fix --dry-run ..
-go -C patchboard run ./cmd/patchboard undo ..
-go -C patchboard run ./cmd/patchboard lint ..
-go -C patchboard run ./cmd/patchboard todos ..
-```
-
-## Task Files
-
-A task is a Markdown file under one of the state folders:
-
-```text
-tasks/doing/fix-login-timeout.md
-```
-
-The parent folder is the authoritative workflow state. Frontmatter is optional,
-but useful:
-
-```markdown
----
-id: task-20260512-auth-timeout
-owner: andy
-tags:
-  - auth
-  - bug
-created: 2026-05-12
----
-
-# Fix login timeout handling
-
-## Problem
-
-Users can get stuck after their session expires.
-
-## Done when
-
-- Expired sessions redirect cleanly
-- Existing session refresh behavior still works
-- Regression test added
-```
-
-Identity rules:
-
-- Task ID: frontmatter `id`, otherwise the filename slug
-- Task title: the first H1 Markdown heading, otherwise frontmatter `title`,
-  otherwise the filename slug. New tasks should prefer a Markdown heading.
-- Task state: parent folder under `tasks/`
-
-Because the folder is authoritative, frontmatter status is redundant. If a
-legacy task includes it, this is invalid:
-
-```text
-tasks/done/fix-login-timeout.md
-```
-
-```yaml
-status: doing
-```
-
-## Code Annotations
-
-Patchboard scans text files for annotation comments. It is not tied to one
-language, so these forms are all valid:
+Connect implementation follow-up to a task:
 
 ```go
 // TODO[task-20260512-auth-timeout]: handle expired refresh token
 ```
 
-```sh
-# FIXME[task-20260512-auth-timeout]: shell scripts need the same behavior
-```
-
-```html
-<!-- WARN[task-20260512-auth-timeout]: this flow is stale -->
-```
-
-Use square brackets for task links:
-
-```text
-MARKER[task-id]: message
-```
-
-Use parentheses for a short owner or tag:
-
-```text
-TODO (dave): follow up
-WARN (@andy): check before deploy
-```
-
-Older `TODO(task-id): message` style is accepted when the value looks like an
-ID, but new linked annotations should use brackets. That keeps task IDs distinct
-from owners.
-
-Default markers:
-
-- `TODO`
-- `FIXME`
-- `XXX`
-- `WARN`
-- `WARNING`
-- `BUG`
-- `HACK`
-- `NOTE`
-- `REVIEW`
-- `OPTIMIZE`
-- `PERF`
-- `SECURITY`
-- `DEPRECATED`
-- `TEMP`
-- `TBD`
-- `TASK`
-
-Unlinked annotations are listed by `patchboard todos`, but they do not fail
-`patchboard lint`. Linked annotations are checked against task IDs.
-
-## Lint Rules
-
-- `TASK001`: unknown state folder
-- `TASK002`: duplicate task ID
-- `TASK003`: missing title
-- `TASK004`: frontmatter `status` does not match the folder
-- `TASK005`: filename does not match the configured filename pattern
-- `TODO001`: code annotation references a missing task
-- `TODO002`: code annotation references a done or archived task
-- `TODO003`: duplicate annotation task ID in code
-
-## Configuration
-
-Patchboard works without configuration. Repos can opt into local conventions
-with `tasks/board.yml`, `tasks/board.yaml`, or `tasks/board.json`. Keeping the
-config under `tasks/` keeps board metadata near the board it describes:
-
-```yaml
-task_root: tasks
-states:
-  - -1_anti-feature
-  - 0_planning
-  - 1_ready
-  - 2_doing
-  - 3_done
-done_states:
-  - -1_anti-feature
-  - 3_done
-filename:
-  enabled: true
-  pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*\\.md$"
-  description: "slug.md"
-  severity: warning
-```
-
-Legacy root config files named `.patchboard.yaml`, `.patchboard.yml`, or
-`.patchboard.json` are still supported for existing repos. Board-local config
-takes precedence when both are present.
-
-JSON is also supported for projects that prefer it:
-
-```json
-{
-  "task_root": "tasks",
-  "states": ["-1_anti-feature", "0_planning", "1_ready", "2_doing", "3_done"],
-  "done_states": ["-1_anti-feature", "3_done"],
-  "filename": {
-    "enabled": true,
-    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*\\.md$",
-    "description": "slug.md",
-    "severity": "warning"
-  }
-}
-```
-
-Use filename lint as a kindness, not a trap. A project manager who only lives
-inside `tasks/` should get a clear message such as
-"filename should match slug.md", not a Go-shaped stack of nonsense.
-Set `"severity":
-"error"` only when the team wants CI or hooks to enforce the naming convention.
-
-Creation dates, task identity, ownership, tags, and richer durable metadata
-should live in frontmatter. Status comes from the containing folder. Titles can
-come from Markdown content or from the filename when the board convention makes
-that reliable.
-
-Future follow-up generation should be explicit, for example a command that turns
-lint findings into planning task files on request. `patchboard lint` should not
-silently mutate the repo.
-
-`patchboard fix --dry-run` previews safe mechanical repairs. `patchboard fix`
-applies only low-risk updates such as creating missing board scaffolding and
-removing redundant frontmatter `status` fields. Ambiguous repairs, such as
-renaming task files or choosing a state for loose task files, remain doctor
-guidance for a human to decide.
-
-`patchboard lint` warns when `tasks/kanban.html` is missing or has drifted from
-the bundled template. `patchboard fix` installs or updates that file while still
-leaving task Markdown as the source of truth.
-
-`patchboard undo` previews task-board changes that Git can restore.
-`patchboard undo --apply` delegates to native `git restore` and refuses to run
-while unrelated untracked task files are present. For a browser-only workflow,
-`tasks/kanban.html` can undo the most recent drag/drop move during the current
-session.
-
-Exit codes:
-
-- `0`: clean
-- `1`: lint errors
-- `2`: config, repo, or tooling error
-
-## Built-in Defaults
-
-Patchboard still works without config. The built-in defaults remain generic so
-existing repos can opt in without learning a naming scheme first:
-
-```yaml
-task_root: tasks
-states:
-  - backlog
-  - ready
-  - doing
-  - blocked
-  - done
-  - archived
-done_states:
-  - done
-  - archived
-ignore_dirs:
-  - .git
-  - node_modules
-  - vendor
-  - dist
-  - build
-```
-
-Files larger than 2 MiB are skipped, and obvious binary files are skipped by
-checking for a NUL byte near the start of the file.
-
-## Development
-
-Run tests:
+Then inspect or validate annotations:
 
 ```bash
-go test ./...
+patchboard todos
+patchboard lint
 ```
 
-Run the CLI against a repo that contains `tasks/`:
+You can also open `tasks/kanban.html` for a visual board. Browsers with local
+directory write support can move cards after you choose the project's `tasks/`
+directory.
 
-```bash
-go run ./cmd/patchboard init
-go run ./cmd/patchboard lint
-go run ./cmd/patchboard todos
-```
+See [Getting Started](docs/getting-started.md) for installation-independent
+usage, development commands, submodule usage, and a fuller first-board
+walkthrough.
 
-The implementation is intentionally boring Go:
+## Documentation
 
-- `cmd/patchboard` handles command dispatch and process exit codes.
-- `internal/tasks` contains the task model, scanners, and lint rules.
-- The scanner uses filesystem walks and regular expressions rather than
-  language-specific parsers, because annotations should work across many file
-  types.
+- [Manifest](docs/manifest.md) — the vision and principles behind PatchBoard
+- [Core concepts](docs/concepts.md) — the filesystem contract and design
+  principles
+- [Getting started](docs/getting-started.md) — initialize and use a board
+- [Command reference](docs/commands.md) — CLI commands, JSON output, and exit
+  codes
+- [Task files](docs/tasks.md) — Markdown format, identity, state, and metadata
+- [Code annotations](docs/annotations.md) — marker syntax and lint behavior
+- [Configuration](docs/configuration.md) — board config, defaults, and naming
+- [Browser kanban](docs/kanban.md) — visual board behavior and limitations
+- [Workflows](docs/workflows.md) — doctor, fix, undo, CI, and future releases
+- [Development](docs/development.md) — repository architecture and testing
 
-When adding features, keep the filesystem contract intact: Markdown tasks and
-Git history are the durable system. Patchboard is a helper, not the database.
+## Status
+
+PatchBoard is early, but its main filesystem workflow is usable. It can
+initialize, inspect, create, move, repair, and validate boards; expose structured
+JSON for automation; and provide a browser-based kanban view.
+
+Planned work includes explicit lint follow-up task generation, broader writable
+browser support, and release-oriented automation. The dogfood board under
+[`tasks/`](tasks/) is the current record of project work.
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before
+submitting changes. The project has explicit authorship and AI-use requirements.
 
 ## License
 
-This project is dual-licensed under MIT OR Zlib. See [LICENSE](LICENSE), [LICENSE.MIT](LICENSE.MIT), and [LICENSE.zlib](LICENSE.zlib).
+This project is dual-licensed under MIT OR Zlib. See [LICENSE](LICENSE),
+[LICENSE.MIT](LICENSE.MIT), and [LICENSE.zlib](LICENSE.zlib).
 
 Copyright (c) 2026 Andrew David LeTourneau
