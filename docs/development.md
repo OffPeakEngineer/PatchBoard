@@ -6,8 +6,10 @@ separate persistence layer.
 
 ## Repository Layout
 
-- `cmd/patchboard` handles command dispatch, flags, human output, JSON output,
-  and process exit codes.
+- `cmd/patchboard/main.go` is the process entry point.
+- `cmd/patchboard/cli.go` declares and parses the command tree.
+- `cmd/patchboard/commands.go` handles command execution, output, and exit
+  behavior.
 - `internal/tasks` contains configuration, task scanning, annotation scanning,
   lint rules, board operations, repair, and undo behavior.
 - `templates` contains embedded task-board assets.
@@ -39,6 +41,5 @@ language-independent behavior and should be covered with fixture-based tests.
 
 ## Project Policies
 
-Read [CONTRIBUTING.md](../CONTRIBUTING.md) and [AGENTS.md](../AGENTS.md) before
-making contributions. They define the project's licensing, authorship, source
-header, and AI-use requirements.
+Read [CONTRIBUTING.md](../CONTRIBUTING.md) before making contributions. It
+defines the project's licensing, authorship, and source-header requirements.

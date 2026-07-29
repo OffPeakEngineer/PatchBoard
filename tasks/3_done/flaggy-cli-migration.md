@@ -34,16 +34,25 @@ cautious licensing policy.
 
 ## Done when
 
-- Flaggy is added as a direct dependency after its license is accepted
-- Every existing command and flag is represented in the generated command tree
-- Command-specific parsing and execution are separated from the top-level entry
+- [x] Flaggy is added as a direct dependency after its license is accepted
+- [x] Every existing command and flag is represented in the generated command tree
+- [x] Command-specific parsing and execution are separated from the top-level entry
   point so `main.go` no longer contains the complete CLI implementation
-- Existing positional task, state, and optional repository arguments remain
+- [x] Existing positional task, state, and optional repository arguments remain
   compatible unless a reviewed migration explicitly changes them
-- Human help output covers all commands, flags, and positional values
-- Unknown commands, missing required values, and invalid flags retain clear
+- [x] Human help output covers all commands, flags, and positional values
+- [x] Unknown commands, missing required values, and invalid flags retain clear
   errors and intentional exit codes
-- CLI tests cover argument ordering, help, output streams, and exit behavior
+- [x] CLI tests cover argument ordering, help, output streams, and exit behavior
+
+## Implementation
+
+- `cmd/patchboard/cli.go` declares and parses the Flaggy command tree.
+- `cmd/patchboard/commands.go` contains command execution and output.
+- `cmd/patchboard/main.go` is limited to parsing, top-level error handling, and
+  dispatch.
+- Parser and subprocess tests preserve legacy forms and verify help and failure
+  behavior.
 
 ## Depends on
 

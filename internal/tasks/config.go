@@ -3,6 +3,7 @@ package tasks
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -117,37 +118,98 @@ func findRepoRoot(start string, cfg Config) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
+	start = current
+	gitRoot, err := findGitRoot(current)
+	if err != nil {
+		return "", "", err
+	}
 
 	for {
-		for _, configFileName := range BoardConfigFileNames {
-			configPath := filepath.Join(current, cfg.TaskRoot, configFileName)
-			if _, err := os.Stat(configPath); err == nil {
-				return current, configPath, nil
-			} else if err != nil && !errors.Is(err, os.ErrNotExist) {
-				return "", "", err
-			}
-		}
-
-		for _, configFileName := range RootConfigFileNames {
-			configPath := filepath.Join(current, configFileName)
-			if _, err := os.Stat(configPath); err == nil {
-				return current, configPath, nil
-			} else if err != nil && !errors.Is(err, os.ErrNotExist) {
-				return "", "", err
-			}
-		}
-
-		info, err := os.Stat(filepath.Join(current, cfg.TaskRoot))
-		if err == nil && info.IsDir() {
-			return current, "", nil
-		} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+		if configPath, found, err := boardAtRoot(current, cfg); err != nil {
 			return "", "", err
+		} else if found {
+			return current, configPath, nil
 		}
 
+		if gitRoot != "" && current == gitRoot {
+			break
+		}
 		parent := filepath.Dir(current)
 		if parent == current {
-			return "", "", os.ErrNotExist
+			break
 		}
 		current = parent
 	}
+
+	boundary := "no Git worktree was found"
+	if gitRoot != "" {
+		boundary = fmt.Sprintf("Git worktree boundary is %s", gitRoot)
+	}
+	return "", "", fmt.Errorf("no Patchboard board found from %s (%s); searched for %s or %s; run patchboard init or select a repository with -C PATH", start, boundary, filepath.Join(cfg.TaskRoot, "board.yml"), cfg.TaskRoot)
+}
+
+func boardAtRoot(root string, cfg Config) (string, bool, error) {
+	for _, configFileName := range BoardConfigFileNames {
+		configPath := filepath.Join(root, cfg.TaskRoot, configFileName)
+		if _, err := os.Stat(configPath); err == nil {
+			return configPath, true, nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return "", false, err
+		}
+	}
+	for _, configFileName := range RootConfigFileNames {
+		configPath := filepath.Join(root, configFileName)
+		if _, err := os.Stat(configPath); err == nil {
+			return configPath, true, nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return "", false, err
+		}
+	}
+	info, err := os.Stat(filepath.Join(root, cfg.TaskRoot))
+	if err == nil && info.IsDir() {
+		return "", true, nil
+	}
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return "", false, err
+	}
+	return "", false, nil
+}
+
+func findGitRoot(start string) (string, error) {
+	current := start
+	for {
+		if _, err := os.Stat(filepath.Join(current, ".git")); err == nil {
+			return current, nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return "", err
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return "", nil
+		}
+		current = parent
+	}
+}
+
+// ResolveInitRoot chooses the default initialization target. Existing boards
+// remain valid outside Git; new non-Git boards require an explicit force.
+func ResolveInitRoot(start string, force bool) (string, error) {
+	abs, err := filepath.Abs(start)
+	if err != nil {
+		return "", err
+	}
+	if root, _, err := findRepoRoot(abs, DefaultConfig()); err == nil {
+		return root, nil
+	}
+	gitRoot, err := findGitRoot(abs)
+	if err != nil {
+		return "", err
+	}
+	if gitRoot != "" {
+		return gitRoot, nil
+	}
+	if force {
+		return abs, nil
+	}
+	return "", fmt.Errorf("cannot infer a project root from %s: no Git worktree or existing tasks directory; rerun with patchboard init --force or select a repository with -C PATH", abs)
 }

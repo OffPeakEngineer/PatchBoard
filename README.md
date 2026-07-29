@@ -25,6 +25,10 @@ PatchBoard keeps both sides close to the repository:
 PatchBoard is intentionally not a database. The durable record is the file
 tree, and the tool helps inspect, repair, and automate it.
 
+The `patchboard` executable is replaceable infrastructure. Its installation
+location does not select a project; PatchBoard discovers the board from the
+working directory or an explicit `-C`/`--repo` path.
+
 ## Who It Is For
 
 PatchBoard fits small product, design, infrastructure, and engineering teams
@@ -35,6 +39,19 @@ clones, or long-lived repositories.
 It is not intended to replace portfolio planning, customer-support queues, or
 company-wide reporting. It works best as the repo-local layer of truth: the
 concrete plan for what this repository is doing next.
+
+## Install
+
+From a source checkout, install the standalone binary into your configured Go
+binary directory:
+
+```bash
+go install ./cmd/patchboard
+```
+
+Make sure `$(go env GOBIN)`—or `$(go env GOPATH)/bin` when `GOBIN` is empty—is
+on your `PATH`. Tagged releases are also configured to publish platform archives
+containing the `patchboard` binary.
 
 ## Quick Start
 
@@ -71,8 +88,8 @@ You can also open `tasks/kanban.html` for a visual board. Browsers with local
 directory write support can move cards after you choose the project's `tasks/`
 directory.
 
-See [Getting Started](docs/getting-started.md) for installation-independent
-usage, development commands, submodule usage, and a fuller first-board
+See [Getting Started](docs/getting-started.md) for installation, repository
+selection, troubleshooting, development commands, and a fuller first-board
 walkthrough.
 
 ## Documentation
@@ -86,6 +103,8 @@ walkthrough.
 - [Task files](docs/tasks.md) — Markdown format, identity, state, and metadata
 - [Code annotations](docs/annotations.md) — marker syntax and lint behavior
 - [Configuration](docs/configuration.md) — board config, defaults, and naming
+- [Repository resolution](docs/repository-resolution.md) — how PatchBoard
+  selects a project and task root
 - [Browser kanban](docs/kanban.md) — visual board behavior and limitations
 - [Workflows](docs/workflows.md) — doctor, fix, undo, CI, and future releases
 - [Development](docs/development.md) — repository architecture and testing
@@ -102,8 +121,7 @@ browser support, and release-oriented automation. The dogfood board under
 
 ## Contributing
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before
-submitting changes. The project has explicit authorship and AI-use requirements.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes.
 
 ## License
 

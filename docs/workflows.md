@@ -67,3 +67,8 @@ remain read-only and must not silently mutate a repository.
 Release-oriented automation is planned, including workflows for handling done
 items during release preparation. Until then, Git history and the board remain
 the authoritative inputs rather than generated release state.
+
+GoReleaser builds standalone `patchboard` binaries for Linux, macOS, and
+Windows. Release archives contain the applicable license files alongside the
+binary. The binary—not a source submodule—is the distributed tool; consuming
+repositories retain only their own `tasks/` tree.

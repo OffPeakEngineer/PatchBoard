@@ -3,6 +3,19 @@
 Commands accept an optional repository path. When omitted, PatchBoard starts
 from the current directory and searches upward for a board.
 
+## Global Repository Selection
+
+Every command accepts `-C PATH` or `--repo PATH`. The option can appear before
+or after the subcommand:
+
+```bash
+patchboard -C ../project status
+patchboard lint --repo ../project
+```
+
+The global option is preferred over the compatible legacy trailing path.
+Supplying both forms is an error.
+
 ## Board Views
 
 ### `patchboard` and `patchboard status`
@@ -11,6 +24,7 @@ Summarize task counts, active work, annotations, and lint health.
 
 ```bash
 patchboard status
+patchboard status --short
 patchboard status --json
 ```
 
@@ -42,7 +56,12 @@ existing files.
 
 ```bash
 patchboard init
+patchboard init --force
 ```
+
+Outside Git with no existing board, `--force` explicitly initializes the
+current directory. Explicit `-C`/`--repo` targets do not require this
+acknowledgment.
 
 ### `patchboard create`
 
