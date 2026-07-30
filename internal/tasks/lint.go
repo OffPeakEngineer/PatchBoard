@@ -48,8 +48,7 @@ func nonNilAnnotations(todoList []Annotation) []Annotation {
 }
 
 // lintTasks validates the Markdown task board itself. The folder name is the
-// canonical task state, so frontmatter status is treated as a cached copy that
-// must agree with the filesystem.
+// canonical task state, so frontmatter status is invalid derived metadata.
 func lintTasks(taskList []Task, cfg Config) []Issue {
 	var issues []Issue
 	seenIDs := map[string]Task{}
@@ -82,12 +81,12 @@ func lintTasks(taskList []Task, cfg Config) []Issue {
 			})
 		}
 
-		if task.FrontmatterStat != "" && task.FrontmatterStat != task.State {
+		if task.FrontmatterStat != "" {
 			issues = append(issues, Issue{
 				Severity: "error",
 				Code:     "TASK004",
 				Path:     task.Path,
-				Message:  fmt.Sprintf("status mismatch: file is in %q but frontmatter says %q", task.State, task.FrontmatterStat),
+				Message:  "frontmatter status is derived from the containing folder; remove it",
 			})
 		}
 

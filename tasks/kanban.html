@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Patchboard</title>
+  <title>PatchBoard</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -79,6 +79,11 @@
     button {
       padding: 0 12px;
       cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
     }
 
     button.primary {
@@ -159,6 +164,7 @@
     }
 
     .card:active { cursor: grabbing; }
+    .card[draggable="false"] { cursor: default; }
 
     .title {
       overflow-wrap: anywhere;
@@ -200,13 +206,15 @@
 </head>
 <body>
   <header>
-    <h1 data-i18n="appTitle">Patchboard</h1>
+    <h1 data-i18n="appTitle">PatchBoard</h1>
     <div class="toolbar">
       <select id="language" aria-label="Language"></select>
-      <button id="open" class="primary" data-i18n="openFolder">Open tasks folder</button>
-      <button id="refresh" data-i18n="refresh">Refresh</button>
+      <button id="open" class="primary" data-i18n="chooseFolderAction">Choose tasks folder</button>
+      <button id="change" data-i18n="changeFolderAction" hidden>Change folder</button>
+      <button id="refresh" data-i18n="refresh" hidden>Refresh</button>
       <button id="undo" data-i18n="undoMove" hidden>Undo move</button>
-      <button id="install" data-i18n="installApp">Install app</button>
+      <button id="forget" data-i18n="forgetFolder" hidden>Forget folder</button>
+      <button id="install" data-i18n="installApp" hidden>Install app</button>
     </div>
   </header>
   <div id="status" data-i18n="chooseFolder">Choose this project's tasks folder to load the board.</div>
@@ -215,19 +223,28 @@
   <script>
     const messages = {
       en: {
-        appTitle: "Patchboard",
-        openFolder: "Open tasks folder",
+        appTitle: "PatchBoard",
+        chooseFolderAction: "Choose tasks folder",
+        reconnectFolderAction: "Reconnect tasks folder",
+        changeFolderAction: "Change folder",
+        forgetFolder: "Forget folder",
         refresh: "Refresh",
         chooseFolder: "Choose this project's tasks folder to load the board.",
-        unsupported: "This browser cannot write to local folders from a page. Use Chrome or Edge for drag-and-drop moves.",
-        loaded: "Board loaded.",
+        reconnectFolder: "Reconnect the remembered tasks folder to load the board.",
+        readOnly: "Board loaded read-only. Reconnect the folder to enable moves.",
+        unsupported: "This browser cannot open local task folders. Use a browser with File System Access support or use the PatchBoard CLI.",
+        loaded: "Board loaded and writable.",
+        loadedNotRemembered: "Board loaded, but this browser could not remember the folder.",
+        folderForgotten: "Remembered folder removed. Choose a tasks folder to continue.",
+        staleFolder: "The remembered folder is no longer available. Reconnect it, change folders, or forget it.",
+        permissionDenied: "Folder access was not granted. Reconnect it or choose a different folder.",
+        wrongFolder: "That does not look like a PatchBoard tasks folder. Choose the folder containing board.yml and the state folders.",
+        openFailed: "The folder could not be opened. Try reconnecting it or choose a different folder.",
         moved: "Moved card.",
         undoMove: "Undo move",
         undone: "Move undone.",
         undoUnavailable: "There is no browser move to undo.",
         installApp: "Install app",
-        installUnavailable: "Install is available only when the browser exposes an app install prompt for this page.",
-        localFileHint: "This board was opened from a local file. Choose this tasks folder once so the browser can grant access.",
         moveFailed: "Move failed. Check browser permissions and try again.",
         noTasks: "No tasks",
         noStates: "No state folders found.",
@@ -236,19 +253,28 @@
         openFile: "Open"
       },
       es: {
-        appTitle: "Patchboard",
-        openFolder: "Abrir carpeta de tareas",
+        appTitle: "PatchBoard",
+        chooseFolderAction: "Elegir carpeta de tareas",
+        reconnectFolderAction: "Reconectar carpeta de tareas",
+        changeFolderAction: "Cambiar carpeta",
+        forgetFolder: "Olvidar carpeta",
         refresh: "Actualizar",
         chooseFolder: "Elige la carpeta de tareas de este proyecto para cargar el tablero.",
-        unsupported: "Este navegador no puede escribir carpetas locales desde una pagina. Usa Chrome o Edge para mover tarjetas.",
-        loaded: "Tablero cargado.",
+        reconnectFolder: "Reconecta la carpeta de tareas recordada para cargar el tablero.",
+        readOnly: "Tablero cargado en modo de solo lectura. Reconecta la carpeta para habilitar movimientos.",
+        unsupported: "Este navegador no puede abrir carpetas de tareas locales. Usa un navegador compatible con File System Access o la CLI de PatchBoard.",
+        loaded: "Tablero cargado con acceso de escritura.",
+        loadedNotRemembered: "Tablero cargado, pero este navegador no pudo recordar la carpeta.",
+        folderForgotten: "Se elimino la carpeta recordada. Elige una carpeta de tareas para continuar.",
+        staleFolder: "La carpeta recordada ya no esta disponible. Reconectala, cambia de carpeta u olvidala.",
+        permissionDenied: "No se concedio acceso a la carpeta. Reconectala o elige otra carpeta.",
+        wrongFolder: "Esta no parece una carpeta de tareas de PatchBoard. Elige la carpeta que contiene board.yml y las carpetas de estado.",
+        openFailed: "No se pudo abrir la carpeta. Intenta reconectarla o elige otra carpeta.",
         moved: "Tarjeta movida.",
         undoMove: "Deshacer movimiento",
         undone: "Movimiento deshecho.",
         undoUnavailable: "No hay un movimiento del navegador para deshacer.",
         installApp: "Instalar app",
-        installUnavailable: "La instalacion solo esta disponible cuando el navegador muestra una opcion para instalar esta pagina.",
-        localFileHint: "Este tablero se abrio desde un archivo local. Elige esta carpeta de tareas una vez para dar acceso al navegador.",
         moveFailed: "No se pudo mover. Revisa los permisos del navegador e intenta de nuevo.",
         noTasks: "Sin tareas",
         noStates: "No se encontraron carpetas de estado.",
@@ -264,26 +290,41 @@
     let draggedPath = "";
     let lastMove = null;
     let installPrompt = null;
+    let accessMode = "empty";
+    let rememberedHandle = false;
+    let statusKey = "chooseFolder";
+    let statusError = false;
 
     const boardEl = document.querySelector("#board");
     const statusEl = document.querySelector("#status");
     const languageEl = document.querySelector("#language");
+    const openEl = document.querySelector("#open");
+    const changeEl = document.querySelector("#change");
+    const refreshEl = document.querySelector("#refresh");
+    const undoEl = document.querySelector("#undo");
+    const forgetEl = document.querySelector("#forget");
+    const installEl = document.querySelector("#install");
 
     initLanguage();
-    document.querySelector("#open").addEventListener("click", openFolder);
-    document.querySelector("#refresh").addEventListener("click", refresh);
-    document.querySelector("#undo").addEventListener("click", undoLastMove);
-    document.querySelector("#install").addEventListener("click", installApp);
+    openEl.addEventListener("click", openFolder);
+    changeEl.addEventListener("click", chooseFolder);
+    refreshEl.addEventListener("click", refresh);
+    undoEl.addEventListener("click", undoLastMove);
+    forgetEl.addEventListener("click", forgetFolder);
+    installEl.addEventListener("click", installApp);
     window.addEventListener("beforeinstallprompt", (event) => {
       event.preventDefault();
       installPrompt = event;
+      updateControls();
     });
 
     if (!("showDirectoryPicker" in window)) {
-      setStatus(t("unsupported"), true);
-    } else if (window.location.protocol === "file:") {
-      setStatus(t("localFileHint"));
+      accessMode = "unsupported";
+      setStatus("unsupported", true);
+    } else {
+      void restoreFolder();
     }
+    updateControls();
 
     function pickLanguage() {
       const saved = localStorage.getItem("patchboard.language");
@@ -317,6 +358,8 @@
       for (const el of document.querySelectorAll("[data-i18n]")) {
         el.textContent = t(el.dataset.i18n);
       }
+      renderStatus();
+      updateControls();
     }
 
     function t(key) {
@@ -325,21 +368,119 @@
 
     async function openFolder() {
       if (!("showDirectoryPicker" in window)) {
-        setStatus(t("unsupported"), true);
+        setStatus("unsupported", true);
         return;
       }
-      rootHandle = await window.showDirectoryPicker({ id: "patchboard-tasks", mode: "readwrite" });
-      await refresh();
+      if (rootHandle && (accessMode === "reconnect" || accessMode === "readonly")) {
+        await reconnectFolder();
+        return;
+      }
+      await chooseFolder();
+    }
+
+    async function chooseFolder() {
+      try {
+        const handle = await window.showDirectoryPicker({ id: "patchboard-tasks", mode: "readwrite" });
+        await loadHandle(handle, "writable", true);
+      } catch (error) {
+        if (error && error.name === "AbortError") return;
+        handleOpenError(error);
+      }
+    }
+
+    async function restoreFolder() {
+      let handle = null;
+      try {
+        handle = await storedFolder();
+        if (!handle) return;
+        rootHandle = handle;
+        rememberedHandle = true;
+        const writePermission = await queryPermission(handle, "readwrite");
+        if (writePermission === "granted") {
+          await loadHandle(handle, "writable", false);
+          return;
+        }
+        const readPermission = await queryPermission(handle, "read");
+        if (readPermission === "granted") {
+          await loadHandle(handle, "readonly", false);
+          return;
+        }
+        accessMode = "reconnect";
+        setStatus("reconnectFolder");
+        updateControls();
+      } catch (error) {
+        rootHandle = handle;
+        rememberedHandle = Boolean(handle);
+        accessMode = "reconnect";
+        setStatus("staleFolder", true);
+        updateControls();
+      }
+    }
+
+    async function reconnectFolder() {
+      try {
+        const permission = await requestPermission(rootHandle, "readwrite");
+        if (permission === "granted") {
+          await loadHandle(rootHandle, "writable", false);
+          return;
+        }
+        const readPermission = await queryPermission(rootHandle, "read");
+        if (readPermission === "granted") {
+          await loadHandle(rootHandle, "readonly", false);
+          return;
+        }
+        accessMode = "reconnect";
+        setStatus("permissionDenied", true);
+        updateControls();
+      } catch (error) {
+        handleOpenError(error);
+      }
+    }
+
+    async function loadHandle(handle, mode, remember) {
+      const nextBoard = await readBoard(handle);
+      rootHandle = handle;
+      board = nextBoard;
+      accessMode = mode;
+      lastMove = null;
+      render();
+      let remembered = rememberedHandle;
+      if (remember) {
+        remembered = await saveFolder(handle);
+        rememberedHandle = remembered;
+      }
+      setStatus(remember && !remembered ? "loadedNotRemembered" : mode === "writable" ? "loaded" : "readOnly");
+      updateControls();
+    }
+
+    function handleOpenError(error) {
+      console.error(error);
+      if (error && error.code === "PATCHBOARD_WRONG_FOLDER") {
+        setStatus("wrongFolder", true);
+      } else if (error && (error.name === "NotFoundError" || error.name === "NotReadableError")) {
+        accessMode = "reconnect";
+        setStatus("staleFolder", true);
+      } else if (error && error.name === "NotAllowedError") {
+        accessMode = "reconnect";
+        setStatus("permissionDenied", true);
+      } else {
+        setStatus("openFailed", true);
+      }
+      updateControls();
     }
 
     async function refresh() {
       if (!rootHandle) {
-        setStatus(t("chooseFolder"));
+        setStatus("chooseFolder");
         return;
       }
-      board = await readBoard(rootHandle);
-      render();
-      setStatus(t("loaded"));
+      try {
+        board = await readBoard(rootHandle);
+        render();
+        setStatus(accessMode === "writable" ? "loaded" : "readOnly");
+      } catch (error) {
+        handleOpenError(error);
+      }
     }
 
     async function readBoard(handle) {
@@ -348,11 +489,16 @@
         entries.push([name, child]);
       }
 
-      const configuredStates = await readConfiguredStates(handle);
+      const config = await readConfiguredStates(handle);
       const dirs = entries
         .filter(([name, child]) => child.kind === "directory" && !name.startsWith("."))
         .map(([name]) => name);
-      const states = configuredStates.length ? configuredStates.filter((state) => dirs.includes(state)) : dirs.sort();
+      if (!looksLikeTaskRoot(config, dirs)) {
+        const error = new Error("selected directory is not a PatchBoard task root");
+        error.code = "PATCHBOARD_WRONG_FOLDER";
+        throw error;
+      }
+      const states = config.states.length ? config.states.filter((state) => dirs.includes(state)) : dirs.sort();
       const tasks = [];
 
       for (const state of states) {
@@ -368,13 +514,24 @@
     }
 
     async function readConfiguredStates(handle) {
-      for (const name of ["board.yml", "board.yaml"]) {
-        try {
-          const file = await (await handle.getFileHandle(name)).getFile();
-          return parseStates(await file.text());
-        } catch (_) {}
+      try {
+        const file = await (await handle.getFileHandle("board.yml")).getFile();
+        return { found: true, states: parseStates(await file.text()) };
+      } catch (error) {
+        if (error && error.name !== "NotFoundError") throw error;
       }
-      return [];
+      return { found: false, states: [] };
+    }
+
+    function looksLikeTaskRoot(config, dirs) {
+      if (config.found) {
+        return config.states.length > 0 && config.states.some((state) => dirs.includes(state));
+      }
+      const commonStates = new Set([
+        "-1_anti-feature", "0_planning", "1_ready", "2_doing", "3_done",
+        "backlog", "ready", "doing", "blocked", "done", "archived"
+      ]);
+      return dirs.filter((name) => commonStates.has(name)).length >= 2;
     }
 
     function parseStates(text) {
@@ -433,9 +590,11 @@
         const lane = document.createElement("section");
         lane.className = "lane";
         lane.dataset.state = state;
-        lane.addEventListener("dragover", onDragOver);
-        lane.addEventListener("dragleave", () => lane.classList.remove("over"));
-        lane.addEventListener("drop", onDrop);
+        if (accessMode === "writable") {
+          lane.addEventListener("dragover", onDragOver);
+          lane.addEventListener("dragleave", () => lane.classList.remove("over"));
+          lane.addEventListener("drop", onDrop);
+        }
 
         const laneTasks = board.tasks.filter((task) => task.state === state).sort((a, b) => a.title.localeCompare(b.title));
         lane.append(laneHeader(state, laneTasks.length));
@@ -468,7 +627,7 @@
     function card(task) {
       const el = document.createElement("article");
       el.className = "card";
-      el.draggable = true;
+      el.draggable = accessMode === "writable";
       el.dataset.path = task.path;
       el.addEventListener("dragstart", () => {
         draggedPath = task.path;
@@ -519,29 +678,29 @@
       try {
         await moveTask(task, targetState);
         lastMove = { file: task.file, from: task.state, to: targetState };
-        updateUndoButton();
-        setStatus(t("moved"));
+        updateControls();
+        setStatus("moved");
         await refresh();
       } catch (error) {
         console.error(error);
-        setStatus(t("moveFailed"), true);
+        setStatus("moveFailed", true);
       }
     }
 
     async function undoLastMove() {
       if (!lastMove) {
-        setStatus(t("undoUnavailable"), true);
+        setStatus("undoUnavailable", true);
         return;
       }
       try {
         await moveTask({ file: lastMove.file, state: lastMove.to }, lastMove.from);
         lastMove = null;
-        updateUndoButton();
-        setStatus(t("undone"));
+        updateControls();
+        setStatus("undone");
         await refresh();
       } catch (error) {
         console.error(error);
-        setStatus(t("moveFailed"), true);
+        setStatus("moveFailed", true);
       }
     }
 
@@ -558,22 +717,124 @@
     }
 
     async function installApp() {
-      if (!installPrompt) {
-        setStatus(t("installUnavailable"), true);
-        return;
-      }
+      if (!installPrompt) return;
       installPrompt.prompt();
       await installPrompt.userChoice;
       installPrompt = null;
+      updateControls();
     }
 
-    function setStatus(message, error = false) {
-      statusEl.textContent = message;
-      statusEl.classList.toggle("error", error);
+    async function queryPermission(handle, mode) {
+      if (!handle || typeof handle.queryPermission !== "function") return "prompt";
+      return handle.queryPermission({ mode });
     }
 
-    function updateUndoButton() {
-      document.querySelector("#undo").hidden = !lastMove;
+    async function requestPermission(handle, mode) {
+      if (!handle || typeof handle.requestPermission !== "function") return "denied";
+      return handle.requestPermission({ mode });
+    }
+
+    function folderStorageKey() {
+      return `folder:${window.location.href.split("#")[0]}`;
+    }
+
+    function openDatabase() {
+      return new Promise((resolve, reject) => {
+        if (!("indexedDB" in window)) {
+          reject(new Error("IndexedDB is unavailable"));
+          return;
+        }
+        const request = indexedDB.open("patchboard", 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains("settings")) db.createObjectStore("settings");
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function storedFolder() {
+      const db = await openDatabase();
+      try {
+        return await new Promise((resolve, reject) => {
+          const request = db.transaction("settings").objectStore("settings").get(folderStorageKey());
+          request.onsuccess = () => resolve(request.result || null);
+          request.onerror = () => reject(request.error);
+        });
+      } finally {
+        db.close();
+      }
+    }
+
+    async function saveFolder(handle) {
+      try {
+        const db = await openDatabase();
+        try {
+          await new Promise((resolve, reject) => {
+            const request = db.transaction("settings", "readwrite").objectStore("settings").put(handle, folderStorageKey());
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+          });
+          return true;
+        } finally {
+          db.close();
+        }
+      } catch (error) {
+        console.warn("PatchBoard could not remember the selected folder.", error);
+        return false;
+      }
+    }
+
+    async function forgetFolder() {
+      try {
+        const db = await openDatabase();
+        try {
+          await new Promise((resolve, reject) => {
+            const request = db.transaction("settings", "readwrite").objectStore("settings").delete(folderStorageKey());
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+          });
+        } finally {
+          db.close();
+        }
+      } catch (error) {
+        console.warn("PatchBoard could not remove the remembered folder.", error);
+      }
+      rootHandle = null;
+      rememberedHandle = false;
+      accessMode = "empty";
+      lastMove = null;
+      board = { states: [], tasks: [] };
+      render();
+      setStatus("folderForgotten");
+      updateControls();
+    }
+
+    function setStatus(key, error = false) {
+      statusKey = key;
+      statusError = error;
+      renderStatus();
+    }
+
+    function renderStatus() {
+      statusEl.textContent = t(statusKey);
+      statusEl.classList.toggle("error", statusError);
+    }
+
+    function updateControls() {
+      const unsupported = accessMode === "unsupported";
+      const reconnect = accessMode === "reconnect" || accessMode === "readonly";
+      const loaded = accessMode === "writable";
+      openEl.hidden = unsupported;
+      openEl.dataset.i18n = reconnect ? "reconnectFolderAction" : loaded ? "changeFolderAction" : "chooseFolderAction";
+      openEl.textContent = t(openEl.dataset.i18n);
+      changeEl.hidden = !reconnect;
+      refreshEl.hidden = !rootHandle || accessMode === "reconnect";
+      refreshEl.disabled = !rootHandle;
+      undoEl.hidden = !lastMove || accessMode !== "writable";
+      forgetEl.hidden = !rootHandle && !rememberedHandle;
+      installEl.hidden = !installPrompt;
     }
   </script>
 </body>

@@ -1,4 +1,5 @@
 # Go binaries
+/patchboard
 *.exe
 *.exe~
 *.dll

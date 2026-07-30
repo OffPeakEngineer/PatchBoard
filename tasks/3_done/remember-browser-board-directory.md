@@ -58,3 +58,23 @@ permission on later visits.
 The initial permission gesture cannot be removed for a standalone local HTML
 file. The goal is to make selection a one-time or one-click setup, not to bypass
 the browser's filesystem security model.
+
+## Resolution
+
+Completed 2026-07-29.
+
+- The browser board stores only its `FileSystemDirectoryHandle` in IndexedDB,
+  keyed to the board page URL.
+- Startup restores the handle and uses `queryPermission()` for read and
+  read/write access. `requestPermission()` is called only from the reconnect
+  button's user gesture.
+- Granted handles load immediately; read-only handles load without draggable
+  cards; prompt or denied handles expose reconnect, change, and forget recovery.
+- Picker cancellation is neutral. Stale and missing handles retain explicit
+  recovery actions.
+- The existing `patchboard-tasks` picker ID remains in use. Chrome 150 on macOS
+  exposed the API and rendered the correct standalone `file:` empty state; the
+  native picker selection itself remains a repeatable manual check because it
+  cannot be completed in headless Chrome.
+- Go tests cover the storage and permission contracts present in the bundled
+  template, and inline JavaScript syntax validation passes.

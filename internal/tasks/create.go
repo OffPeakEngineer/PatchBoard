@@ -134,10 +134,8 @@ func contains(values []string, needle string) bool {
 }
 
 func defaultCreateState(states []string) string {
-	for _, preferred := range []string{"0_planning", "backlog", "planning", "0_backlog", "1_ready", "ready"} {
-		if contains(states, preferred) {
-			return preferred
-		}
+	if contains(states, "0_planning") {
+		return "0_planning"
 	}
 	if len(states) > 0 {
 		return states[0]

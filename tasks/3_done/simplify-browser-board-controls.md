@@ -51,3 +51,20 @@ The interface should stay small and make the next useful action obvious.
 ## Depends on
 
 - `task-20260714-browser-capability-and-fallbacks`
+
+## Resolution
+
+Completed 2026-07-29.
+
+- The primary action now changes among choose, reconnect, and change according
+  to the current capability and permission state.
+- Refresh, undo, forget, change, and install controls appear only when useful.
+  Read-only cards are not draggable.
+- Canceling the native picker leaves the page unchanged. Wrong directories,
+  denied permission, and stale handles produce short recovery guidance.
+- The selected directory must contain a usable `board.yml` plus configured
+  state folders, or resemble a standard PatchBoard task root.
+- English and Spanish translation keys are unique and tested for exact parity.
+  PatchBoard casing is consistent in the page.
+- The board remains one self-contained HTML template with no framework or build
+  step.

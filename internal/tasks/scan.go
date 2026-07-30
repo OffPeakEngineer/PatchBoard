@@ -262,11 +262,7 @@ func parseAnnotations(line string, lineNumber int, path string, pattern *regexp.
 			ref.TaskID = bracketID
 		}
 		if parenValue := strings.TrimSpace(match[3]); parenValue != "" {
-			if isLikelyOwner(parenValue) {
-				ref.Owner = strings.TrimPrefix(parenValue, "@")
-			} else {
-				ref.TaskID = parenValue
-			}
+			ref.Owner = strings.TrimPrefix(parenValue, "@")
 		}
 
 		refs = append(refs, ref)
@@ -287,20 +283,6 @@ func hasCommentPrefix(prefix string) bool {
 func isFenceLine(line string) bool {
 	trimmed := strings.TrimSpace(line)
 	return strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "~~~")
-}
-
-// isLikelyOwner preserves the older parenthesized task-link form only when the
-// value looks more like an ID than a person's short handle. New task links
-// should use square brackets so this heuristic can eventually disappear.
-func isLikelyOwner(value string) bool {
-	value = strings.TrimSpace(value)
-	if strings.HasPrefix(value, "@") {
-		return true
-	}
-	if strings.ContainsAny(value, "-_/:#") {
-		return false
-	}
-	return len(value) > 0 && len(value) <= 32
 }
 
 // resolveRepoRoot makes Patchboard work well as a submodule or standalone

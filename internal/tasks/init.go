@@ -29,7 +29,7 @@ func Init(repoRoot string) (InitResult, error) {
 		if err != nil {
 			return InitResult{}, err
 		}
-		if err := unmarshalConfig(configPath, body, &cfg); err != nil {
+		if err := unmarshalConfig(body, &cfg); err != nil {
 			return InitResult{}, err
 		}
 		normalizeConfig(&cfg)

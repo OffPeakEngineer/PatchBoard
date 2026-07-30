@@ -26,7 +26,7 @@ title: Loose task
 
 func TestDoctorReportsMissingConfiguredStateFolders(t *testing.T) {
 	root := t.TempDir()
-	writeFile(t, root, ".patchboard.yaml", `
+	writeFile(t, root, "tasks/board.yml", `
 states:
   - 0_backlog
   - 1_ready
@@ -48,14 +48,14 @@ title: Backlog task
 
 func TestFixDryRunReportsSafeRepairsWithoutMutating(t *testing.T) {
 	root := t.TempDir()
-	writeFile(t, root, ".patchboard.yaml", `
+	writeFile(t, root, "tasks/board.yml", `
 states:
-  - ready
-  - done
+  - 1_ready
+  - 3_done
 done_states:
-  - done
+  - 3_done
 `)
-	writeFile(t, root, "tasks/ready/fix-login.md", `---
+	writeFile(t, root, "tasks/1_ready/fix-login.md", `---
 id: task-auth
 status: done
 ---
@@ -70,10 +70,10 @@ status: done
 	if !hasFixOperation(result, "FIX_STATE_DIR") || !hasFixOperation(result, "FIX_STATUS") {
 		t.Fatalf("expected scaffold and status operations, got %#v", result.Operations)
 	}
-	if _, err := os.Stat(filepath.Join(root, "tasks", "done")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(root, "tasks", "3_done")); !os.IsNotExist(err) {
 		t.Fatalf("dry run created state directory: %v", err)
 	}
-	body, err := os.ReadFile(filepath.Join(root, "tasks", "ready", "fix-login.md"))
+	body, err := os.ReadFile(filepath.Join(root, "tasks", "1_ready", "fix-login.md"))
 	if err != nil {
 		t.Fatalf("reading task: %v", err)
 	}
@@ -84,14 +84,14 @@ status: done
 
 func TestFixAppliesSafeRepairs(t *testing.T) {
 	root := t.TempDir()
-	writeFile(t, root, ".patchboard.yaml", `
+	writeFile(t, root, "tasks/board.yml", `
 states:
-  - ready
-  - done
+  - 1_ready
+  - 3_done
 done_states:
-  - done
+  - 3_done
 `)
-	writeFile(t, root, "tasks/ready/fix-login.md", `---
+	writeFile(t, root, "tasks/1_ready/fix-login.md", `---
 id: task-auth
 status: done
 ---
@@ -106,11 +106,11 @@ status: done
 	if !hasFixOperation(result, "FIX_STATE_DIR") || !hasFixOperation(result, "FIX_STATUS") {
 		t.Fatalf("expected scaffold and status operations, got %#v", result.Operations)
 	}
-	assertPathExists(t, root, "tasks", "done", ".gitkeep")
+	assertPathExists(t, root, "tasks", "3_done", ".gitkeep")
 	assertPathExists(t, root, "tasks", "README.md")
 	assertPathExists(t, root, "tasks", "kanban.html")
 
-	body, err := os.ReadFile(filepath.Join(root, "tasks", "ready", "fix-login.md"))
+	body, err := os.ReadFile(filepath.Join(root, "tasks", "1_ready", "fix-login.md"))
 	if err != nil {
 		t.Fatalf("reading task: %v", err)
 	}
@@ -124,7 +124,7 @@ status: done
 
 func TestFixUpdatesDriftedKanbanTemplate(t *testing.T) {
 	root := t.TempDir()
-	writeFile(t, root, "tasks/ready/.gitkeep", "")
+	writeFile(t, root, "tasks/1_ready/.gitkeep", "")
 	writeFile(t, root, "tasks/kanban.html", "<!doctype html><title>custom</title>\n")
 
 	result, err := Fix(root, FixOptions{})

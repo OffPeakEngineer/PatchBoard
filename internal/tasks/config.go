@@ -1,18 +1,15 @@
 package tasks
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"sigs.k8s.io/yaml"
 )
 
-var BoardConfigFileNames = []string{"board.yml", "board.yaml", "board.json"}
-var RootConfigFileNames = []string{".patchboard.yaml", ".patchboard.yml", ".patchboard.json"}
+const BoardConfigFileName = "board.yml"
 
 type Config struct {
 	TaskRoot          string         `json:"task_root"`
@@ -36,8 +33,8 @@ type FilenameConfig struct {
 func DefaultConfig() Config {
 	return Config{
 		TaskRoot:   "tasks",
-		States:     []string{"backlog", "ready", "doing", "blocked", "done", "archived"},
-		DoneStates: []string{"done", "archived"},
+		States:     []string{"-1_anti-feature", "0_planning", "1_ready", "2_doing", "3_done"},
+		DoneStates: []string{"-1_anti-feature", "3_done"},
 		AnnotationMarkers: []string{
 			"TODO",
 			"FIXME",
@@ -74,17 +71,14 @@ func LoadConfig(start string) (string, Config, error) {
 	if err != nil {
 		return "", Config{}, err
 	}
-	if err := unmarshalConfig(configPath, body, &cfg); err != nil {
+	if err := unmarshalConfig(body, &cfg); err != nil {
 		return "", Config{}, err
 	}
 	normalizeConfig(&cfg)
 	return root, cfg, nil
 }
 
-func unmarshalConfig(path string, body []byte, cfg *Config) error {
-	if strings.HasSuffix(path, ".json") {
-		return json.Unmarshal(body, cfg)
-	}
+func unmarshalConfig(body []byte, cfg *Config) error {
 	return yaml.Unmarshal(body, cfg)
 }
 
@@ -149,21 +143,11 @@ func findRepoRoot(start string, cfg Config) (string, string, error) {
 }
 
 func boardAtRoot(root string, cfg Config) (string, bool, error) {
-	for _, configFileName := range BoardConfigFileNames {
-		configPath := filepath.Join(root, cfg.TaskRoot, configFileName)
-		if _, err := os.Stat(configPath); err == nil {
-			return configPath, true, nil
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return "", false, err
-		}
-	}
-	for _, configFileName := range RootConfigFileNames {
-		configPath := filepath.Join(root, configFileName)
-		if _, err := os.Stat(configPath); err == nil {
-			return configPath, true, nil
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return "", false, err
-		}
+	configPath := filepath.Join(root, cfg.TaskRoot, BoardConfigFileName)
+	if _, err := os.Stat(configPath); err == nil {
+		return configPath, true, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", false, err
 	}
 	info, err := os.Stat(filepath.Join(root, cfg.TaskRoot))
 	if err == nil && info.IsDir() {
