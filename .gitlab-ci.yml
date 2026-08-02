@@ -16,7 +16,7 @@ test:
   stage: test
   parallel:
     matrix:
-      - GO_VERSION: "1.22"
+      - GO_VERSION: "1.26"
   image: golang:${GO_VERSION}
   script:
     - mkdir -p "$GOCACHE" "$GOMODCACHE"
@@ -27,7 +27,7 @@ test:
 
 build:
   stage: build
-  image: golang:1.22
+  image: golang:1.26
   parallel:
     matrix:
       - TARGET: "linux_amd64"
