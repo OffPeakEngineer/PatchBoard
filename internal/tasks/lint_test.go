@@ -337,6 +337,55 @@ func TestInitCreatesDefaultTaskBoardWithoutOverwriting(t *testing.T) {
 	}
 }
 
+func TestInitDoesNotDiscoverParentTaskBoard(t *testing.T) {
+	parent := t.TempDir()
+	writeFile(t, parent, "tasks/board.yml", `
+states:
+  - parent_backlog
+  - parent_done
+done_states:
+  - parent_done
+`)
+	child := filepath.Join(parent, "nested-project")
+	if err := os.MkdirAll(child, 0o755); err != nil {
+		t.Fatalf("creating nested project: %v", err)
+	}
+
+	result, err := Init(child)
+	if err != nil {
+		t.Fatalf("Init returned error: %v", err)
+	}
+
+	wantTaskRoot := filepath.ToSlash(filepath.Join(child, "tasks"))
+	if result.TaskRoot != wantTaskRoot {
+		t.Fatalf("Init used task root %q, want %q", result.TaskRoot, wantTaskRoot)
+	}
+	for _, state := range DefaultConfig().States {
+		assertPathExists(t, child, "tasks", state, ".gitkeep")
+	}
+	assertPathMissing(t, parent, "tasks", "parent_backlog")
+	assertPathMissing(t, parent, "tasks", "parent_done")
+}
+
+func TestInitUsesConfigurationAtExactRoot(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "tasks/board.yml", `
+states:
+  - ideas
+  - shipped
+done_states:
+  - shipped
+`)
+
+	if _, err := Init(root); err != nil {
+		t.Fatalf("Init returned error: %v", err)
+	}
+
+	assertPathExists(t, root, "tasks", "ideas", ".gitkeep")
+	assertPathExists(t, root, "tasks", "shipped", ".gitkeep")
+	assertPathMissing(t, root, "tasks", "0_planning")
+}
+
 func TestCreateDefaultsToFirstConfiguredState(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, root, "tasks/board.yml", `

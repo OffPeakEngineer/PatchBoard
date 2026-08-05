@@ -17,15 +17,12 @@ type InitResult struct {
 // to leave existing files alone so it can be run repeatedly in a repo or added
 // to bootstrap scripts without risking local task notes.
 func Init(repoRoot string) (InitResult, error) {
-	cfg := DefaultConfig()
 	root, err := filepath.Abs(repoRoot)
 	if err != nil {
 		return InitResult{}, err
 	}
-	if loadedRoot, loadedCfg, err := LoadConfig(root); err == nil {
-		root = loadedRoot
-		cfg = loadedCfg
-	} else if !errors.Is(err, os.ErrNotExist) {
+	cfg, err := loadConfigAtRoot(root)
+	if err != nil {
 		return InitResult{}, err
 	}
 
