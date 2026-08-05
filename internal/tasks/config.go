@@ -78,6 +78,26 @@ func LoadConfig(start string) (string, Config, error) {
 	return root, cfg, nil
 }
 
+// loadConfigAtRoot loads configuration only from root. Unlike LoadConfig, it
+// never searches parent directories, which is important when initializing a
+// nested project that should own a separate task board.
+func loadConfigAtRoot(root string) (Config, error) {
+	cfg := DefaultConfig()
+	configPath := filepath.Join(root, cfg.TaskRoot, BoardConfigFileName)
+	body, err := os.ReadFile(configPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return cfg, nil
+	}
+	if err != nil {
+		return Config{}, err
+	}
+	if err := unmarshalConfig(body, &cfg); err != nil {
+		return Config{}, err
+	}
+	normalizeConfig(&cfg)
+	return cfg, nil
+}
+
 func unmarshalConfig(body []byte, cfg *Config) error {
 	return yaml.Unmarshal(body, cfg)
 }
