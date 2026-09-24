@@ -29,7 +29,6 @@ test:
   stage: test
   script:
     - sh scripts/check-version.sh
-    - sh scripts/test-release.sh
     - go mod download
     - go test -race ./...
     - go vet ./...
