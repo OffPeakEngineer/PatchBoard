@@ -1,5 +1,5 @@
 # Go binaries
-patchboard
+/patchboard
 *.exe
 *.exe~
 *.dll
@@ -15,3 +15,8 @@ patchboard
 
 # Go workspace file
 go.work
+
+# CI caches and release artifacts
+/.cache/
+/build/
+/dist/
