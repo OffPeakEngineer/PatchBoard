@@ -7,8 +7,9 @@ separate persistence layer.
 ## Repository Layout
 
 - `cmd/patchboard/main.go` is the process entry point.
-- `cmd/patchboard/cli.go` declares and parses the command tree.
-- `cmd/patchboard/commands.go` handles command execution, output, and exit
+- `main.go` preserves the root `go run .` entry point.
+- `internal/cli/parse.go` declares and parses the command tree.
+- `internal/cli/commands.go` handles command execution, output, and exit
   behavior.
 - `internal/tasks` contains configuration, task scanning, annotation scanning,
   lint rules, board operations, repair, and undo behavior.
@@ -19,7 +20,12 @@ separate persistence layer.
 
 ```bash
 go test ./...
+go test -race ./...
+go vet ./...
 ```
+
+The minimum Go version is 1.25, as declared in `go.mod` and used by GitLab CI.
+See [Releases](releases.md) for local archive builds and release checks.
 
 ## Run the CLI from Source
 

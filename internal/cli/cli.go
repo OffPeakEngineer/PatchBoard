@@ -5,6 +5,9 @@ import (
 	"os"
 )
 
+// Version is set by the release build's linker flags.
+var Version = "dev"
+
 // Main runs the PatchBoard command-line application.
 func Main() {
 	inv, err := parseCLI(os.Args[1:])

@@ -50,8 +50,11 @@ go install ./cmd/patchboard
 ```
 
 Make sure `$(go env GOBIN)`—or `$(go env GOPATH)/bin` when `GOBIN` is empty—is
-on your `PATH`. Tagged releases are also configured to publish platform archives
-containing the `patchboard` binary.
+on your `PATH`. Versioned binaries for Linux, macOS, and Windows (amd64 and arm64)
+are published on the [GitLab releases page](https://gitlab.com/off-peak.engineer/utilities/patchboard/-/releases).
+The project is currently private, so downloads require project access. See
+[release instructions](docs/releases.md) for archive formats and checksums.
+Run `patchboard --version` to identify an installed release.
 
 ## Quick Start
 
@@ -108,6 +111,7 @@ walkthrough.
 - [Browser kanban](docs/kanban.md) — visual board behavior and limitations
 - [Workflows](docs/workflows.md) — doctor, fix, undo, CI, and future releases
 - [Development](docs/development.md) — repository architecture and testing
+- [Releases](docs/releases.md) — versions, CI, platform downloads, and publication
 
 ## Status
 
@@ -116,7 +120,7 @@ initialize, inspect, create, move, repair, and validate boards; expose structure
 JSON for automation; and provide a browser-based kanban view.
 
 Planned work includes explicit lint follow-up task generation, broader writable
-browser support, and release-oriented automation. The dogfood board under
+browser support, and done-task cleanup during releases. The dogfood board under
 [`tasks/`](tasks/) is the current record of project work.
 
 ## Contributing

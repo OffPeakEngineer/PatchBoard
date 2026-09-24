@@ -24,15 +24,6 @@ func Init(repoRoot string) (InitResult, error) {
 	cfg, err := loadConfigAtRoot(root)
 	if err != nil {
 		return InitResult{}, err
-	} else if found && configPath != "" {
-		body, err := os.ReadFile(configPath)
-		if err != nil {
-			return InitResult{}, err
-		}
-		if err := unmarshalConfig(body, &cfg); err != nil {
-			return InitResult{}, err
-		}
-		normalizeConfig(&cfg)
 	}
 
 	result := InitResult{TaskRoot: filepath.ToSlash(filepath.Join(root, cfg.TaskRoot))}

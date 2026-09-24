@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"text/template"
 
-	pbtemplates "ledoerr/patchboard/templates"
+	pbtemplates "gitlab.com/off-peak.engineer/utilities/patchboard/templates"
 )
 
 func renderTemplate(name string, data any) (string, error) {

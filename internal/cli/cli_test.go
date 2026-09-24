@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"ledoerr/patchboard/internal/tasks"
+	"gitlab.com/off-peak.engineer/utilities/patchboard/internal/tasks"
 )
 
 func TestParseCLIDefaultsToStatusInCurrentRepo(t *testing.T) {
@@ -105,6 +105,11 @@ func TestParseCLIPreservesLegacyCommandShapes(t *testing.T) {
 }
 
 func TestCLIHelpAndErrorsUseIntentionalStreamsAndExitCodes(t *testing.T) {
+	version := runCLIProcess(t, "--version")
+	if version.code != 0 || version.stderr != "" || version.stdout != "Version: "+Version+"\n" {
+		t.Fatalf("unexpected version result: %#v", version)
+	}
+
 	help := runCLIProcess(t, "--help")
 	if help.code != 0 || help.stdout != "" || !strings.Contains(help.stderr, "Subcommands:") {
 		t.Fatalf("unexpected help result: %#v", help)

@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"ledoerr/patchboard/internal/tasks"
+	"gitlab.com/off-peak.engineer/utilities/patchboard/internal/tasks"
 )
 
 func runInvocation(inv cliInvocation) {

@@ -51,10 +51,9 @@ patchboard lint --json
 Filename conventions can remain warnings or be elevated to errors through board
 configuration.
 
-This repository runs GitHub Actions and a parallel GitLab CI pipeline. GitHub-
-specific release helpers remain on GitHub; the GitLab pipeline mirrors build,
-test, and release behavior where possible. Configure equivalent release secrets
-as GitLab CI variables when using those jobs.
+This repository uses GitLab CI for race tests, vet, board lint, release checks,
+and platform archive builds. MR pipelines provide downloadable snapshots.
+See [Releases](releases.md) for the version-file and tag publication flow.
 
 ## Follow-Up Generation
 
@@ -64,9 +63,9 @@ remain read-only and must not silently mutate a repository.
 
 ## Release Support
 
-Release-oriented automation is planned, including workflows for handling done
-items during release preparation. Until then, Git history and the board remain
-the authoritative inputs rather than generated release state.
+Releases are requested by updating `VERSION` and its release notes in an MR.
+After merge, CI creates the tag and publishes its platform archives. Cleanup of
+done tasks remains a separate planned feature; release jobs preserve the board.
 
 GoReleaser builds standalone `patchboard` binaries for Linux, macOS, and
 Windows. Release archives contain the applicable license files alongside the

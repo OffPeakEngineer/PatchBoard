@@ -20,21 +20,20 @@ destructive and should be designed carefully.
 
 ## Context
 
-This repo already has a release shape:
-
-- `.github/workflows/prepare-release.yml` uses release-please on `main`.
-- `.github/workflows/release.yml` runs GoReleaser for version tags.
-- `.goreleaser.yml` publishes artifacts and currently uses Git changelog data.
+This repo uses GitLab CI: an MR updates `VERSION` and release notes, a successful
+main pipeline creates the tag, and the tag pipeline runs GoReleaser. Archives
+and checksums are stored in the Generic Package Registry and linked from the
+GitLab release. See `docs/releases.md`. Release jobs currently preserve all tasks.
 
 Current release tooling still commonly builds on Conventional Commits:
 
 - Conventional Commits maps `fix`, `feat`, and breaking changes to SemVer
   release levels and is explicitly designed for changelog/version automation.
 - release-please parses Conventional Commit history to create release PRs,
-  changelogs, version bumps, and GitHub releases.
+  changelogs, version bumps, and GitHub releases, but is no longer used here.
 - semantic-release remains the "take over the whole release workflow" option,
-  mostly from the Node ecosystem, while release-please plus GoReleaser fits this
-  repo's current split better.
+  mostly from the Node ecosystem. This repo currently uses reviewed version
+  changes with GoReleaser instead of automatic commit-based version selection.
 
 Patchboard should integrate with that pipeline without owning all release
 automation.
@@ -57,7 +56,7 @@ automation.
   `patchboard ci cleanup-done --dry-run` and `--apply`.
 - The destructive path requires an explicit apply step and refuses dirty or
   ambiguous worktrees.
-- The command can be inserted into the existing release-please and GoReleaser
+- The command can be inserted into the existing GitLab CI and GoReleaser
   flow without replacing either tool.
 - Documentation explains how Patchboard relates to Conventional Commits,
   release-please, semantic-release, and GoReleaser.

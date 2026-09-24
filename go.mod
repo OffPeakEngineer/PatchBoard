@@ -1,4 +1,4 @@
-module ledoerr/patchboard
+module gitlab.com/off-peak.engineer/utilities/patchboard
 
 go 1.25
 

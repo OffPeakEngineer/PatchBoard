@@ -6,7 +6,7 @@ affect board discovery.
 
 ## Install the Binary
 
-From a PatchBoard source checkout, install the standalone executable:
+From a PatchBoard source checkout with Go 1.25 or newer, install the standalone executable:
 
 ```bash
 go install ./cmd/patchboard
@@ -17,11 +17,15 @@ Add that directory to your shell's `PATH`, then verify the installation:
 
 ```bash
 patchboard --help
+patchboard --version
 ```
 
-Tagged releases are also configured to provide archives for Linux, macOS, and
-Windows. Extract the archive for your platform and place the `patchboard` binary
-in a directory on `PATH`.
+The [GitLab releases page](https://gitlab.com/off-peak.engineer/utilities/patchboard/-/releases)
+provides versioned archives for Linux, macOS (`darwin`), and Windows, on amd64
+and arm64. Downloads require access to the currently private project. Verify the
+archive against `checksums.txt`, extract it, and place `patchboard` (or
+`patchboard.exe`) in a directory on `PATH`. See [Releases](releases.md) for details.
+Source builds report `dev`; release binaries report the published version.
 
 ## Initialize a Board
 
@@ -37,12 +41,11 @@ With the built-in defaults, this creates:
 tasks/
   README.md
   kanban.html
-  backlog/
-  ready/
-  doing/
-  blocked/
-  done/
-  archived/
+  -1_anti-feature/
+  0_planning/
+  1_ready/
+  2_doing/
+  3_done/
 ```
 
 Initialization does not overwrite existing board files.
@@ -81,7 +84,7 @@ patchboard done fix-login-timeout
 For an explicit destination, use:
 
 ```bash
-patchboard move fix-login-timeout blocked
+patchboard move fix-login-timeout 0_planning
 ```
 
 Task IDs, filenames, slugs, and unambiguous task paths can identify a task.

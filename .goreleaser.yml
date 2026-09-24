@@ -1,114 +1,42 @@
+version: 2
 project_name: patchboard
+
 builds:
   - id: patchboard
-    dir: ./cmd/patchboard
+    main: ./cmd/patchboard
     binary: patchboard
     env:
       - CGO_ENABLED=0
-    goos:
-      - linux
-      - windows
-      - darwin
-    goarch:
-      - amd64
-      - arm64
-    goarm:
-      - 6
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
     ldflags:
-      - -s -w
-  - id: patchboard-musl
-    dir: ./cmd/patchboard
-    binary: patchboard
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-    goarch:
-      - amd64
-      - arm
-    goarm:
-      - 7
-    ldflags:
-      - -s -w
+      - -s -w -X gitlab.com/off-peak.engineer/utilities/patchboard/internal/cli.Version={{ .Version }}
 
 archives:
-  - format: tar.gz
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - LICENSE
       - LICENSE.MIT
       - LICENSE.zlib
-    replacements:
-      darwin: macOS
-      amd64: x86_64
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-  - format: zip
-    files:
-      - LICENSE
-      - LICENSE.MIT
-      - LICENSE.zlib
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+      - README.md
 
 checksum:
-  name_template: "checksums.txt"
+  name_template: checksums.txt
 
 changelog:
   use: git
 
 release:
-  github:
-    name_template: "v{{ .Version }}"
+  gitlab:
+    owner: off-peak.engineer/utilities
+    name: patchboard
+  name_template: "PatchBoard v{{ .Version }}"
 
-# Package publishers
-brews:
-  - name: patchboard
-    tap:
-      owner: ledoerr
-      name: homebrew-tap
-    folder: Formula
-    commit_author:
-      name: goreleaser
-      email: goreleaser@example.com
-
-chocolateys:
-  - name: patchboard
-    package_template: "{{ .ProjectName }}"
-    commit_author:
-      name: goreleaser
-      email: goreleaser@example.com
-
-scoops:
-  - name: patchboard
-    bucket: ledoerr/scoop-bucket
-    folder: bucket
-
-aur:
-  name: patchboard
-  user: ledoerr
-
-nfpm:
-  - id: default
-    formats: [deb, rpm]
-    package: patchboard
-    maintainer: "Your Name <you@example.com>"
-    files:
-      - src: build/patchboard
-        dst: /usr/local/bin/patchboard
-    description: "Patchboard CLI"
-    license: MIT OR Zlib
-
-snaps:
-  - name: patchboard
-    summary: "Patchboard CLI"
-    publisher: ledoerr
-
-winget:
-  name: patchboard
-  repo: ledoerr/winget-pkgs
-
-nix:
-  - name: patchboard
-    repo: ledoerr/nixpkgs
-
-# Notes:
-# - Replace placeholders like YOUR_GITHUB_USER, YOUR_AUR_USER, and YOUR_SNAP_PUBLISHER.
-# - Add the required secrets to the repository (AUR token, SNAPCRAFT token, etc.).
+gitlab_urls:
+  use_package_registry: true
+  use_job_token: true

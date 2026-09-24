@@ -27,7 +27,7 @@ type cliInvocation struct {
 func parseCLI(args []string) (cliInvocation, error) {
 	parser := flaggy.NewParser("patchboard")
 	parser.Description = "Repo-native task board and annotation linter"
-	parser.ShowVersionWithVersionFlag = false
+	parser.Version = Version
 	parser.ShowCompletion = true
 
 	var explicitRepo string

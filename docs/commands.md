@@ -3,6 +3,9 @@
 Commands accept an optional repository path. When omitted, PatchBoard starts
 from the current directory and searches upward for a board.
 
+`patchboard --version` prints the installed release version and exits without
+requiring a board. Source builds report `dev`.
+
 ## Global Repository Selection
 
 Every command accepts `-C PATH` or `--repo PATH`. The option can appear before
