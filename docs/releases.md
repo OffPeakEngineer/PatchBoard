@@ -33,7 +33,7 @@ Only stable `vX.Y.Z` tag pipelines publish; prereleases are not yet configured.
 - Enable the Package Registry (already enabled in the current project).
 - Protect the default branch and `v*` tags. Allow the release token's identity
   to create those protected tags.
-- Add `RELEASE_TOKEN` as a masked, protected CI variable: a project access token
+- Add `GITLAB_TOKEN` as a masked, protected CI variable: a project access token
   with `api` scope and a role permitted to create release tags. This token is
   used only by `prepare-release`. A personal API token with equivalent access is
   an alternative if project access tokens are unavailable.

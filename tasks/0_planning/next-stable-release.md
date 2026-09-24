@@ -44,7 +44,7 @@ Creating or publishing the tag is a separate, explicit final action.
 - There were no existing tags or releases at preparation time. `VERSION` selects
   `0.1.0`; notes are in `releases/v0.1.0.md`.
 - The release MR is the version approval: merging it runs the main pipeline,
-  creates its tag, and starts publication. Configure `RELEASE_TOKEN` and review
+  creates its tag, and starts publication. Configure `GITLAB_TOKEN` and review
   any existing auto-merge setting before pushing/merging the candidate.
 - See `docs/releases.md` for setup, artifact layout, and remaining native/browser
   smoke tests. Published installation verification remains outstanding.

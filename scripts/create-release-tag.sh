@@ -19,13 +19,13 @@ if git rev-parse --verify "refs/tags/$tag" >/dev/null 2>&1; then
   echo "$tag already exists; no new release requested."
   exit 0
 fi
-: "${RELEASE_TOKEN:?Set a masked, protected project access token with api scope; see docs/releases.md}"
+: "${GITLAB_TOKEN:?Set a masked, protected project access token with api scope; see docs/releases.md}"
 : "${CI_API_V4_URL:?Missing GitLab API URL}"
 : "${CI_PROJECT_ID:?Missing GitLab project ID}"
 # Use an API token: a tag pushed with CI_JOB_TOKEN does not trigger a pipeline.
 # Do not retry this POST automatically; a network failure can follow creation.
 curl --fail-with-body --silent --show-error --request POST \
-  --header "PRIVATE-TOKEN: $RELEASE_TOKEN" \
+  --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
   --data-urlencode "tag_name=$tag" \
   --data-urlencode "ref=$CI_COMMIT_SHA" \
   --data-urlencode "message=PatchBoard $tag" \
