@@ -20,3 +20,7 @@ go.work
 /.cache/
 /build/
 /dist/
+
+# CI tooling and rendered Pages site
+/node_modules/
+/public/

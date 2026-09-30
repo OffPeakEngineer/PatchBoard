@@ -28,6 +28,9 @@ archives:
 checksum:
   name_template: checksums.txt
 
+snapshot:
+  version_template: "{{ .Env.PATCHBOARD_VERSION }}"
+
 changelog:
   use: git
 

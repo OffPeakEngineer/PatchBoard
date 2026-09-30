@@ -1,3 +1,4 @@
+# Copyright (c) 2026 Andrew David LeTourneau; MIT OR Zlib
 workflow:
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/'
@@ -6,33 +7,49 @@ workflow:
       when: never
     - if: '$CI_COMMIT_BRANCH'
 
-stages: [test, build, release]
-
+stages: [test, build, deploy]
 default:
   image: golang:1.25
-
 variables:
   GIT_DEPTH: "0"
   GOTOOLCHAIN: local
   GOCACHE: "$CI_PROJECT_DIR/.cache/go-build"
   GOMODCACHE: "$CI_PROJECT_DIR/.cache/go-mod"
-
 cache:
   key:
     files: [go.sum]
     prefix: go-1.25
-  paths:
-    - .cache/go-build/
-    - .cache/go-mod/
+  paths: [.cache/go-build/, .cache/go-mod/]
 
 test:
   stage: test
   script:
-    - sh scripts/check-version.sh
-    - go mod download
     - go test -race ./...
     - go vet ./...
     - go run ./cmd/patchboard lint
+
+board:
+  stage: test
+  image: node:24-bookworm
+  cache: []
+  script:
+    - npm ci
+    - |
+      if [ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]; then
+        npx commitlint --from "$CI_MERGE_REQUEST_DIFF_BASE_SHA" --to "$CI_COMMIT_SHA" --verbose
+      elif [ -z "${CI_COMMIT_TAG:-}" ] && [ "${CI_PIPELINE_SOURCE:-}" = push ]; then
+        if [ "${CI_COMMIT_BEFORE_SHA:-}" = 0000000000000000000000000000000000000000 ]; then
+          git log -1 --format=%B | npx commitlint
+        else
+          npx commitlint --from "$CI_COMMIT_BEFORE_SHA" --to "$CI_COMMIT_SHA" --verbose
+        fi
+      fi
+    - npx playwright install --with-deps chromium
+    - npm test
+    - npm run build:pages
+  artifacts:
+    paths: [public/]
+    expire_in: 1 week
 
 snapshot:
   stage: build
@@ -42,39 +59,36 @@ snapshot:
     - when: on_success
   script:
     - sh scripts/install-goreleaser.sh
-    - ./.cache/bin/goreleaser check
-    - ./.cache/bin/goreleaser release --snapshot --clean
+    - sh scripts/build-archives.sh
   artifacts:
     name: "patchboard-$CI_COMMIT_SHORT_SHA"
-    paths:
-      - dist/*.tar.gz
-      - dist/*.zip
-      - dist/checksums.txt
+    paths: [dist/*.tar.gz, dist/*.zip, dist/checksums.txt]
     expire_in: 1 week
 
-# Only a successful main push can create a new version tag. The API-created
-# tag starts its own tested release pipeline. MR pipelines never publish.
-prepare-release:
-  stage: release
-  resource_group: release
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'
-  script:
-    - sh scripts/create-release-tag.sh
-
-release:
-  stage: release
-  resource_group: release
+# Only consume tags mirrored from GitHub. GitLab never decides versions or tags.
+release-backup:
+  stage: deploy
+  resource_group: release-backup
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/'
   script:
-    - sh scripts/check-version.sh
     - sh scripts/install-goreleaser.sh
-    - ./.cache/bin/goreleaser check
-    - GITLAB_TOKEN="$CI_JOB_TOKEN" ./.cache/bin/goreleaser release --clean --release-notes "releases/$CI_COMMIT_TAG.md"
+    - GITLAB_TOKEN="$CI_JOB_TOKEN" ./.cache/bin/goreleaser release --clean
   artifacts:
-    paths:
-      - dist/*.tar.gz
-      - dist/*.zip
-      - dist/checksums.txt
+    paths: [dist/*.tar.gz, dist/*.zip, dist/checksums.txt]
     expire_in: 1 week
+
+pages:
+  stage: deploy
+  resource_group: pages
+  needs:
+    - job: board
+      artifacts: true
+    - job: test
+    - job: snapshot
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'
+  script:
+    - test -s public/index.html
+  pages:
+    publish: public

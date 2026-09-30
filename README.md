@@ -51,9 +51,9 @@ go install ./cmd/patchboard
 
 Make sure `$(go env GOBIN)`—or `$(go env GOPATH)/bin` when `GOBIN` is empty—is
 on your `PATH`. Versioned binaries for Linux, macOS, and Windows (amd64 and arm64)
-are published on the [GitLab releases page](https://gitlab.com/off-peak.engineer/utilities/patchboard/-/releases).
-The project is currently private, so downloads require project access. See
-[release instructions](docs/releases.md) for archive formats and checksums.
+are published on [GitHub Releases](https://github.com/OffPeakEngineer/patchboard/releases), with a
+[GitLab release backup](https://gitlab.com/off-peak.engineer/utilities/patchboard/-/releases).
+See [release instructions](docs/releases.md) for archive formats and checksums.
 Run `patchboard --version` to identify an installed release.
 
 ## Quick Start
@@ -89,7 +89,9 @@ patchboard lint
 
 You can also open `tasks/kanban.html` for a visual board. Browsers with local
 directory write support can move cards after you choose the project's `tasks/`
-directory.
+directory. CI also publishes a read-only, single-file snapshot of this board
+to [GitHub Pages](https://offpeakengineer.github.io/patchboard/) and GitLab Pages,
+with task contents included.
 
 See [Getting Started](docs/getting-started.md) for installation, repository
 selection, troubleshooting, development commands, and a fuller first-board

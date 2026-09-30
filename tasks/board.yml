@@ -13,3 +13,12 @@ filename:
   pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*\\.md$"
   description: "slug.md"
   severity: warning
+# Keep CI dependency caches and the published task snapshot out of annotation scans.
+ignore_dirs:
+  - .git
+  - node_modules
+  - vendor
+  - dist
+  - build
+  - .cache
+  - public

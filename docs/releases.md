@@ -1,92 +1,134 @@
 <!-- Copyright (c) 2026 Andrew David LeTourneau; MIT OR Zlib -->
 # Releases
 
-The canonical source and release host is
-[GitLab](https://gitlab.com/off-peak.engineer/utilities/patchboard).
-The module path is `gitlab.com/off-peak.engineer/utilities/patchboard`. The project
-is currently private: source, package, and release downloads require access.
+[OffPeakEngineer/patchboard on GitHub](https://github.com/OffPeakEngineer/patchboard)
+is the official release authority. GitLab is a backup build and release
+host. Both providers test the project, build six platform archives, and publish
+the rendered task board to their own Pages site. The Go module remains
+`gitlab.com/off-peak.engineer/utilities/patchboard`.
 
-## Version and publication flow
+## Conventional Commits and semantic-release
 
-1. Change `VERSION` to a stable SemVer version without a `v` prefix, and add
-   `releases/vX.Y.Z.md` with the release notes in the same MR. The first candidate
-   is `0.1.0`; later release versions must increase.
-2. MR CI validates the version and notes, runs race tests, vet, board lint, and
-   release-script tests, then builds all six platform archives with GoReleaser.
-   Snapshot artifacts are downloadable from the pipeline for one week.
-3. After merge, the default-branch push pipeline repeats those checks and creates
-   an annotated `vX.Y.Z` tag at its exact commit using the GitLab Tags API. An
-   unchanged version whose tag is already in the commit's history is a no-op.
-4. The tag pipeline tests again, checks the tag against `VERSION`, and publishes
-   a GitLab release using the matching notes. GoReleaser stores archives and
-   checksums in the Generic Package Registry and attaches download links to the
-   release. Those downloads do not depend on the one-week CI artifact expiry.
+Use `type(scope): description` commit messages. The scope is optional:
 
-Merging a version bump authorizes publication. Do not enable auto-merge for a
-release MR until its version, notes, and pipeline setup have been reviewed.
-Ordinary main commits with an unchanged version do not produce another release.
-MR, feature-branch, schedule, and manually started branch pipelines do not tag.
-Only stable `vX.Y.Z` tag pipelines publish; prereleases are not yet configured.
+- `fix: repair folder loading` produces a patch release.
+- `feat: export a static board` produces a minor release.
+- `feat!: change the task format` or a `BREAKING CHANGE:` footer produces a major release.
+- `docs:`, `test:`, `chore:`, and `ci:` alone do not produce a release.
 
-## One-time GitLab setup
+CI checks new push commits and PR/MR commit ranges with commitlint. Historical
+commits are not retroactively linted. Use a Conventional Commit title when
+squash-merging as well: the resulting commit determines the release.
 
-- Enable the Package Registry (already enabled in the current project).
-- Protect the default branch and `v*` tags. Allow the release token's identity
-  to create those protected tags.
-- Add `GITLAB_TOKEN` as a masked, protected CI variable: a project access token
-  with `api` scope and a role permitted to create release tags. This token is
-  used only by `prepare-release`. A personal API token with equivalent access is
-  an alternative if project access tokens are unavailable.
-- The tag publisher uses the built-in `CI_JOB_TOKEN`, passed as `GITLAB_TOKEN`.
-  No GitHub or package-manager credentials are required.
+After a tested default-branch push on GitHub, semantic-release reads commits
+since the last reachable `vX.Y.Z` tag, computes the next version, generates notes,
+builds archives with that exact version embedded, creates the tag, and uploads
+the GitHub release assets. No npm package is published. Release jobs are
+serialized. A commit with no release-worthy changes still updates Pages.
 
-A job token cannot create tags through the Tags API, and Git pushes using a job
-token do not start another pipeline. The separate API token is therefore needed
-for automatic tag creation. See the [GitLab job-token permissions](https://docs.gitlab.com/ci/jobs/ci_job_token/)
-and [GoReleaser GitLab configuration](https://goreleaser.com/customization/publish/scm/gitlab/).
+There is no manual `VERSION` bump or required release-notes file. The files in
+`releases/` are historical notes. Mirror existing tags (including `v0.1.0`)
+before enabling the workflow so semantic-release has the correct baseline.
+Without a prior release tag, semantic-release starts at `1.0.0`.
 
-## Artifacts and local validation
+GitLab never runs semantic-release or creates release tags. A mirrored stable
+`vX.Y.Z` tag triggers its backup publisher, which builds that version and uses
+`CI_JOB_TOKEN` to publish a GitLab release and Generic Package Registry assets.
+Backup notes come from Git history; GitHub's semantic-release notes are official.
+Do not create independent release tags on GitLab.
 
-| OS | Architectures | Archive |
-| --- | --- | --- |
-| Linux | amd64, arm64 | `.tar.gz` |
-| macOS (`darwin`) | amd64, arm64 | `.tar.gz` |
-| Windows | amd64, arm64 | `.zip` containing `patchboard.exe` |
+## Provider setup
 
-Archive names are `patchboard_X.Y.Z_OS_ARCH`; each includes the binary, README,
-and all license files. `checksums.txt` lists SHA-256 hashes. On Linux use
-`sha256sum --check --ignore-missing checksums.txt` after downloading archives;
-on macOS use `shasum -a 256`, or on Windows `Get-FileHash -Algorithm SHA256`,
-and compare the result with the matching checksum entry.
+GitHub:
 
-CI uses Go 1.25, matching the minimum in `go.mod`, and GoReleaser 2.18.2.
-The installer verifies the downloaded tool against its published checksum.
-On a Linux amd64/arm64 development machine:
+1. Push the repository history and existing release tags to the official GitHub
+   project. The workflow derives its repository URL and default branch from the
+   running project, so no hard-coded GitHub owner is needed.
+2. Enable Actions and select **GitHub Actions** as the Pages build source.
+3. Permit `GITHUB_TOKEN` to write contents and create protected `v*` tags under
+   your repository rules. No long-lived release token or npm token is required.
+4. Protect the default branch and require the `check` job. Configure the
+   `github-pages` environment to permit deployment from the default branch.
+
+GitLab:
+
+1. Mirror the GitHub default branch and tags into the GitLab project, preserving
+   commit IDs. Configure a GitLab pull mirror, or an existing external mirror
+   service. Mirroring credentials are deliberately separate from release jobs;
+   these workflows do not push between providers. Ensure mirror updates trigger
+   pipelines, and include tags in the mirror configuration.
+2. Keep Package Registry and Pages enabled. Allow the built-in job token to
+   publish project releases/packages, and protect `v*` tags against independent
+   creation. Remove the old tag-creation `GITLAB_TOKEN` variable if unused.
+3. The GoReleaser GitLab target is `off-peak.engineer/utilities/patchboard`;
+   update `.goreleaser.yml` if moving that backup project.
+4. The `pages.publish` syntax requires GitLab 17.9 or newer.
+
+Release and Pages publication happen in the same GitHub workflow as the tested
+push; no secondary tag workflow is needed. GitHub tags created with the built-in
+token do not start other Actions workflows. See the
+[semantic-release GitHub plugin](https://github.com/semantic-release/github),
+[GitHub Pages workflow guide](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages),
+and [GitLab Pages configuration](https://docs.gitlab.com/ci/yaml/#pagespublish).
+
+## Static board publication
+
+Both pipelines run `npm run build:pages`. Chromium opens `tasks/kanban.html`,
+loads the checkout's `tasks/` through a read-only filesystem adapter, and runs
+the page's existing parser and renderer. The exporter then saves
+`public/index.html`: one fully rendered HTML file with inline styles and task
+contents, no JavaScript, no filesystem prompt, and no network dependencies.
+Card links point to task text embedded in that file. The editable local board is
+unchanged. All configured lanes, including done and anti-feature tasks, are
+published. Pages access controls determine who can read this snapshot.
+
+PRs, MRs, and feature branches build preview artifacts but never deploy Pages or
+publish releases. Default-branch pushes publish to the provider running the
+pipeline. GitHub manual default-branch runs can redeploy Pages without releasing;
+GitLab tag pipelines publish backup releases without rolling Pages backward.
+
+## Artifacts and local checks
+
+GoReleaser builds Linux, macOS, and Windows for amd64 and arm64. Archives are
+`patchboard_X.Y.Z_OS_ARCH.tar.gz` (Windows: `.zip`) and include the binary,
+README, and licenses. `checksums.txt` contains SHA-256 hashes. Snapshot artifacts
+expire after one week; published release assets are persistent.
+
+CI uses Go 1.25, Node 24, npm's committed lockfile, and checksum-verified
+GoReleaser 2.18.2. Local checks:
 
 ```sh
-sh scripts/check-version.sh
-sh scripts/test-release.sh
+npm ci
+npx playwright install chromium
+npm test
+npm run build:pages
 go test -race ./...
 go vet ./...
 go run ./cmd/patchboard lint
+# Linux or macOS archive check:
 sh scripts/install-goreleaser.sh
-.cache/bin/goreleaser check
-.cache/bin/goreleaser release --snapshot --clean
+sh scripts/build-archives.sh
 ```
 
-Snapshot builds do not publish or need release credentials. Test the native
-binary's `--version`, `--help`, and board initialization from outside this
-checkout. Cross-compilation verifies buildability; maintainers should also smoke
-test macOS and Windows binaries and browser permission flows before publication.
+For a different task directory or output path:
+`node scripts/export-board.mjs path/to/tasks path/to/index.html`.
+The task directory must contain its own current `kanban.html`.
 
-## Retry and recovery
+## Recovery
 
-If tag creation fails because the token is missing, configure it and retry the
-job. If the request reached GitLab before a network failure, confirm the existing
-tag and its pipeline before retrying; never move an existing release tag.
+Before tag creation, fix the failure and rerun the GitHub workflow. If a failure
+occurs after semantic-release pushes a tag but before uploading all assets,
+inspect that exact tag and GitHub release: semantic-release will not publish the
+same version again automatically. Rebuild that tag with
+`PATCHBOARD_VERSION=X.Y.Z sh scripts/build-archives.sh`, then recover the missing
+release/assets at that tag with the generated notes. Never move or delete a
+published tag to force a retry. Fix released code with a new Conventional Commit.
+Retry a failed GitLab tag job to recover the backup. Keep release packages out
+of registry cleanup rules.
 
-If the tag pipeline fails, retry that pipeline's failed job after resolving the
-cause. Do not delete the version tag merely to retrigger main. A tested main
-commit can also be tagged manually by an authorized maintainer; its tag must
-match `VERSION`. Keep published package versions out of registry cleanup rules.
-Fix a published binary by releasing a new version.
+The repository's board config excludes CI caches and `public/` from annotation
+scanning so downloaded dependencies and exported task text are not linted as
+project source. `npm audit` currently reports three advisories in npm bundled by
+semantic-release's transitive npm plugin. That plugin is not enabled here (this
+project only publishes Go archives); compatible dependency updates do not yet
+resolve those bundled advisories.

@@ -51,9 +51,15 @@ patchboard lint --json
 Filename conventions can remain warnings or be elevated to errors through board
 configuration.
 
-This repository uses GitLab CI for race tests, vet, board lint, release checks,
-and platform archive builds. MR pipelines provide downloadable snapshots.
-See [Releases](releases.md) for the version-file and tag publication flow.
+This repository uses GitHub Actions and GitLab CI for race tests, vet, board
+lint, Conventional Commit checks, browser export tests, and platform archives.
+Both providers publish the rendered task board to their own Pages site after
+a successful default-branch push.
+
+GitHub runs semantic-release to choose versions from Conventional Commits and
+create official release tags and assets. GitLab consumes mirrored tags and
+publishes backup releases without creating tags. See [Releases](releases.md)
+for provider setup, artifact formats, and recovery.
 
 ## Follow-Up Generation
 
@@ -63,11 +69,7 @@ remain read-only and must not silently mutate a repository.
 
 ## Release Support
 
-Releases are requested by updating `VERSION` and its release notes in an MR.
-After merge, CI creates the tag and publishes its platform archives. Cleanup of
-done tasks remains a separate planned feature; release jobs preserve the board.
-
-GoReleaser builds standalone `patchboard` binaries for Linux, macOS, and
-Windows. Release archives contain the applicable license files alongside the
-binary. The binary—not a source submodule—is the distributed tool; consuming
-repositories retain only their own `tasks/` tree.
+Cleanup of done tasks remains a separate planned feature; release jobs preserve
+the board. GoReleaser builds standalone binaries for Linux, macOS, and Windows.
+Release archives include the licenses. Consuming repositories retain only their
+own `tasks/` tree. See [Releases](releases.md) for the publication flow.

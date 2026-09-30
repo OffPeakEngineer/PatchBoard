@@ -19,3 +19,11 @@ By contributing to Patchboard, you agree to:
 ## Questions?
 
 If you have questions, feel free to open an issue to discuss your contribution first.
+
+## Commit messages
+
+Use Conventional Commits: `fix: ...`, `feat: ...`, or `docs: ...`, with an
+optional scope. Mark breaking changes with `!` or a `BREAKING CHANGE:` footer.
+CI checks PR/MR commits; keep squash-merge titles conventional too. GitHub uses
+these messages to choose versions and publish releases automatically after
+default-branch checks pass. See [Releases](docs/releases.md).

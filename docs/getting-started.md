@@ -20,7 +20,9 @@ patchboard --help
 patchboard --version
 ```
 
-The [GitLab releases page](https://gitlab.com/off-peak.engineer/utilities/patchboard/-/releases)
+Official releases are published on
+[GitHub](https://github.com/OffPeakEngineer/patchboard/releases). The backup
+[GitLab releases page](https://gitlab.com/off-peak.engineer/utilities/patchboard/-/releases)
 provides versioned archives for Linux, macOS (`darwin`), and Windows, on amd64
 and arm64. Downloads require access to the currently private project. Verify the
 archive against `checksums.txt`, extract it, and place `patchboard` (or

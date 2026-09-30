@@ -102,3 +102,13 @@ Updating `kanban.html` is a mechanical repair. It does not alter task Markdown.
 7. Move one card, verify undo appears, then undo the move.
 8. Run `go test ./...` to check translation key parity and the template's
    remembered-folder contracts.
+
+## Published snapshots
+
+`npm run build:pages` opens this project's board in headless Chromium, reads its
+own task folder, and exports the rendered result to `public/index.html`. CI
+publishes this file to the running provider's Pages site after a successful
+default-branch build. The snapshot includes every displayed task's Markdown
+text and works offline without JavaScript or folder permissions. Card links
+lead to the embedded task text. It is read-only; use the local board or CLI to
+change tasks. See [Releases](releases.md) for setup and validation.
