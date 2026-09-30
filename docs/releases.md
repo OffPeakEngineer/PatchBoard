@@ -94,8 +94,17 @@ GoReleaser builds Linux, macOS, and Windows for amd64 and arm64. Archives are
 README, and licenses. `checksums.txt` contains SHA-256 hashes. Snapshot artifacts
 expire after one week; published release assets are persistent.
 
-CI uses Go 1.25, Node 24, npm's committed lockfile, and checksum-verified
-GoReleaser 2.18.2. Local checks:
+CI uses Go 1.25, the latest stable Node release, npm's committed lockfile, and
+checksum-verified GoReleaser 2.18.2. GitHub resolves `current` with
+`check-latest: true`; GitLab uses `node:current-bookworm`. The GitHub Actions
+themselves use their supported Node 24 runtime, independently of the Node
+version used for project commands. Both pipelines print the selected Node and
+npm versions. npm enforces the package's minimum Node version (24.10.0).
+
+All direct npm dependencies were checked against the registry's latest releases.
+They remain pinned in the lockfile; upgrading dependencies is a reviewed change,
+while the Node runtime follows stable releases automatically. For local work,
+`nvm install` and `nvm use` read `.nvmrc` and select current Node. Local checks:
 
 ```sh
 npm ci

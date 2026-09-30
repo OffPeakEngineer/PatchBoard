@@ -30,9 +30,10 @@ test:
 
 board:
   stage: test
-  image: node:24-bookworm
+  image: node:current-bookworm
   cache: []
   script:
+    - node --version && npm --version
     - npm ci
     - |
       if [ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]; then
