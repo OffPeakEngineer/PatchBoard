@@ -101,8 +101,12 @@ themselves use their supported Node 24 runtime, independently of the Node
 version used for project commands. Both pipelines print the selected Node and
 npm versions. npm enforces the package's minimum Node version (24.10.0).
 
-All direct npm dependencies were checked against the registry's latest releases.
-They remain pinned in the lockfile; upgrading dependencies is a reviewed change,
+Dependencies use compatible stable releases, pinned in the lockfile. The
+`conventional-changelog-conventionalcommits` release preset is pinned to 9.3.1:
+the stable release-notes-generator 14.x uses writer 8, while preset 10 requires
+writer 9. Upgrade that preset together with the release-notes plugin once its
+writer-9 support is stable. `npm test` checks both version decisions and actual
+release-note rendering. Upgrading dependencies is a reviewed change,
 while the Node runtime follows stable releases automatically. For local work,
 `nvm install` and `nvm use` read `.nvmrc` and select current Node. Local checks:
 
