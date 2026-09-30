@@ -1,0 +1,46 @@
+# Copyright (c) 2026 Andrew David LeTourneau; MIT OR Zlib
+# Copy to .gitlab/patchboard-pages.yml, then include it from .gitlab-ci.yml.
+# Uses standard build/deploy stages; see README if your pipeline customizes them.
+patchboard-build:
+  stage: build
+  image: node:current-bookworm
+  # Do not inherit an application's setup, caches, or build artifacts.
+  inherit:
+    default: false
+  dependencies: []
+  variables:
+    PATCHBOARD_REF: "097f0d865eec8c7e0151efd270132b5cf4f95a06"
+    TASK_DIRECTORY: tasks
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH && $CI_OPEN_MERGE_REQUESTS && $CI_PIPELINE_SOURCE == "push"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH'
+  script:
+    - git init .patchboard-tools
+    - git -C .patchboard-tools remote add origin https://github.com/OffPeakEngineer/PatchBoard.git
+    - git -C .patchboard-tools fetch --depth=1 origin "$PATCHBOARD_REF"
+    - git -C .patchboard-tools checkout --detach FETCH_HEAD
+    - (cd .patchboard-tools && npm ci && npx playwright install --with-deps chromium)
+    - node .patchboard-tools/scripts/export-board.mjs "$TASK_DIRECTORY" public/index.html
+  artifacts:
+    paths: [public/]
+    expire_in: 1 week
+
+patchboard-pages:
+  stage: deploy
+  image: node:current-bookworm
+  inherit:
+    default: false
+  resource_group: pages
+  needs:
+    - job: patchboard-build
+      artifacts: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'
+  script:
+    - test -s public/index.html
+  pages:
+    publish: public
+  artifacts:
+    paths: [public/]

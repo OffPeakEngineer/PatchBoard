@@ -112,3 +112,7 @@ default-branch build. The snapshot includes every displayed task's Markdown
 text and works offline without JavaScript or folder permissions. Card links
 lead to the embedded task text. It is read-only; use the local board or CLI to
 change tasks. See [Releases](releases.md) for setup and validation.
+
+To publish another project's board, start with the
+[copyable publishing examples](../examples/README.md) for GitHub Pages, GitLab
+Pages, local export, and adding a board to an existing site.

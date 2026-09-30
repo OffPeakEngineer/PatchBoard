@@ -99,6 +99,9 @@ walkthrough.
 
 ## Documentation
 
+- [Publishing examples](examples/README.md) — wire your own board into GitHub Pages,
+  GitLab Pages, or an existing static site
+
 - [Manifest](docs/manifest.md) — the vision and principles behind PatchBoard
 - [Core concepts](docs/concepts.md) — the filesystem contract and design
   principles
