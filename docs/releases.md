@@ -73,11 +73,12 @@ and [GitLab Pages configuration](https://docs.gitlab.com/ci/yaml/#pagespublish).
 
 ## Static board publication
 
-Both pipelines run `npm run build:pages`. Chromium opens `tasks/kanban.html`,
-loads the checkout's `tasks/` through a read-only filesystem adapter, and runs
-the page's existing parser and renderer. The exporter then saves
-`public/index.html`: one fully rendered HTML file with inline styles and task
-contents, no JavaScript, no filesystem prompt, and no network dependencies.
+Both pipelines build PatchBoard and run
+`./.cache/bin/patchboard summary --type=html --output public/index.html`:
+one fully rendered HTML file with inline styles and task contents, no
+JavaScript, no filesystem prompt, and no network dependencies. The exporter
+reuses the embedded board styles and reads tasks with PatchBoard's Go scanner;
+it does not need Chromium or an initialized `tasks/kanban.html` to render.
 Card links point to task text embedded in that file. The editable local board is
 unchanged. All configured lanes, including done and anti-feature tasks, are
 published. Pages access controls determine who can read this snapshot.
@@ -112,20 +113,24 @@ while the Node runtime follows stable releases automatically. For local work,
 
 ```sh
 npm ci
-npx playwright install chromium
 npm test
-npm run build:pages
 go test -race ./...
 go vet ./...
-go run ./cmd/patchboard lint
+go build -o .cache/bin/patchboard ./cmd/patchboard
+./.cache/bin/patchboard lint
+./.cache/bin/patchboard summary --type=html --output public/index.html
 # Linux or macOS archive check:
 sh scripts/install-goreleaser.sh
 sh scripts/build-archives.sh
 ```
 
-For a different task directory or output path:
-`node scripts/export-board.mjs path/to/tasks path/to/index.html`.
-The task directory must contain its own current `kanban.html`.
+GitLab's board job downloads the compiled binary from the Go test job. Node is
+used for commit checks and release tests; board rendering uses only PatchBoard.
+With an installed binary, select another project or output path directly:
+
+```sh
+patchboard -C path/to/project summary --type=html --output public/index.html
+```
 
 ## Recovery
 

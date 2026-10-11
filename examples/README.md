@@ -1,8 +1,8 @@
 <!-- Copyright (c) 2026 Andrew David LeTourneau; MIT OR Zlib -->
 # Publish your project's PatchBoard
 
-Your project owns its `tasks/` directory. CI checks out PatchBoard's exporter
-separately, opens **your** `tasks/kanban.html`, reads **your** tasks, and saves a
+Your project owns its `tasks/` directory. CI builds PatchBoard in a separate
+checkout, runs its built-in HTML summary over **your** tasks, and saves a
 single `public/index.html`. Publish that file to your project's Pages site or
 any static web host. Visitors need no Node, JavaScript, or folder permissions.
 
@@ -10,12 +10,12 @@ any static web host. Visitors need no Node, JavaScript, or folder permissions.
 | --- | --- | --- |
 | [GitHub Pages](github-pages.yml) | `.github/workflows/patchboard-pages.yml` | Builds on pushes and PRs; deploys the default branch to GitHub Pages |
 | [GitLab Pages](gitlab-pages.yml) | `.gitlab/patchboard-pages.yml`, included by `.gitlab-ci.yml` | Builds branch/MR artifacts; deploys default-branch pushes to GitLab Pages |
-| [Local export](export-local.sh) | Anywhere, such as `scripts/export-board.sh` | Produces one HTML file for local preview or another static host |
+| Local export | `patchboard summary --type=html --output public/index.html` | Produces one HTML file for local preview or another static host |
 
-These examples only publish a board. Your project does not need Go, npm package
+These examples only publish a board. Your project does not need npm package
 metadata, Conventional Commits, semantic-release, or PatchBoard's own release
-pipeline. Node and Chromium are build tools installed in a separate checkout;
-your project's package files are untouched.
+pipeline. CI uses Go to build the standalone binary in a separate checkout.
+Local exports use an installed PatchBoard binary.
 
 ## Prepare your board
 
@@ -26,19 +26,14 @@ state directories, Markdown tasks, and `kanban.html`. For an existing board,
 them. Empty state directories need a tracked file such as `.gitkeep` to survive
 checkout.
 
-The exporter uses the browser template's `loadHandle` function and DOM structure.
-Use a compatible PatchBoard-generated `kanban.html`; an independently rewritten
-board needs an adapted exporter. The examples pin the exporter to commit
-`097f0d865eec8c7e0151efd270132b5cf4f95a06`, which includes the static export tool.
-Old release tags may predate that tool. Upgrade the pin and the board template
-together. Set `PATCHBOARD_REF` to a reviewed newer commit or release containing
-`scripts/export-board.mjs` and the npm lockfile when upgrading.
+The exporter uses PatchBoard's Go task scanner and embedded board styles. It
+does not require `kanban.html` to exist. The CI examples follow `main` by
+default; set `PATCHBOARD_REF` to a commit or release containing `summary` for
+repeatable builds. Earlier releases may predate the built-in exporter.
 
-The CI examples use current stable Node and actions with Node 24 runtimes. For
-local exports, install Git and Node 24.10+ (current stable recommended). The
-first build downloads npm dependencies and Chromium. All task text displayed
-by the board, including completed tasks, is embedded in the HTML; configure
-Pages access for the intended audience.
+CI needs Git and Go 1.25 or newer to build PatchBoard. Board export needs no
+Node or browser installation. All task text, including completed tasks, is
+embedded in the HTML; configure Pages access for the intended audience.
 
 ## GitHub Pages
 
@@ -85,24 +80,18 @@ See [GitLab's Pages configuration](https://docs.gitlab.com/ci/yaml/#pagespublish
 
 ## Local export or another static host
 
-Copy `export-local.sh` into your project and run it from your project root:
+With PatchBoard installed, run from your project root:
 
 ```sh
-sh scripts/export-board.sh
+patchboard summary --type=html --output public/index.html
 # Custom task folder and output; paths with spaces work too:
-sh scripts/export-board.sh planning/tasks site/board/index.html
+patchboard -C planning/tasks summary --type=html --output site/board/index.html
 ```
 
-The script downloads the pinned tooling into a temporary checkout, installs its
-locked dependencies and Chromium, exports your board, then removes that checkout.
-Chromium and npm may retain their normal download caches. Linux machines need
-Chromium's OS libraries; the CI examples install these with Playwright's
-`--with-deps` option. The local script does not install system packages.
-
 Open the generated HTML directly or upload it to any static host. The published
-output is only that HTML file; neither the tooling checkout nor `node_modules`
-belongs in the site's upload directory. Use `PATCHBOARD_SOURCE` to select your
-own accessible Git mirror or an absolute local checkout path if needed.
+output is only that HTML file; the tooling checkout does not belong in the site's
+upload directory. See [Getting Started](../docs/getting-started.md) for binary
+installation or source builds.
 
 ## Add the board to an existing website
 
@@ -112,11 +101,11 @@ of adding another workflow that replaces the site:
 
 ```sh
 # First build your existing site into public/, then add the board:
-node .patchboard-tools/scripts/export-board.mjs tasks public/board/index.html
+patchboard summary --type=html --output public/board/index.html
 # Your existing deployment now uploads the whole public/ directory once.
 ```
 
-The tooling checkout and installation steps come from either CI example. Link
+The tooling checkout and build steps come from either CI example. Link
 from the site's home page to `board/`. Export after the site generator has
 finished so it does not erase the board. Likewise, if your application stores
 source files in `public/`, choose a dedicated output directory such as

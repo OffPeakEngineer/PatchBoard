@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- Copyright (c) 2026 Andrew David LeTourneau; MIT OR Zlib -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="PatchBoard summary">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PatchBoard summary</title>
+  <style>{{.Styles}}
+    #task-details { padding: 24px; }
+    #task-details article { margin-bottom: 32px; scroll-margin-top: 16px; }
+    #task-details pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <header><h1>PatchBoard</h1></header>
+  <div id="status">Read-only snapshot of this project's tasks. {{.TotalTasks}} tasks.</div>
+  <main id="board" aria-label="Task board">
+    {{range .States}}
+    <section class="lane" data-state="{{.State}}">
+      <div class="lane-header"><span>{{.State}}</span><span class="count">{{.Count}}</span></div>
+      <div class="cards">
+        {{range .Tasks}}
+        <article class="card" draggable="false" data-path="{{.Path}}">
+          <div class="title">{{.Title}}</div>
+          <div class="meta"><span>ID: {{.ID}}</span><span>File: {{.Filename}}</span></div>
+          <div class="card-actions"><a class="file-link" href="#{{.Anchor}}">Open file</a></div>
+        </article>
+        {{else}}<div class="empty">No tasks</div>{{end}}
+      </div>
+    </section>
+    {{end}}
+  </main>
+  <section id="task-details">
+    <h2>Task files</h2>
+    {{range .States}}{{range .Tasks}}
+    <article id="{{.Anchor}}">
+      <h3>{{.Title}}</h3>
+      <pre>{{.Markdown}}</pre>
+      <a href="#board">Back to board</a>
+    </article>
+    {{end}}{{end}}
+  </section>
+</body>
+</html>

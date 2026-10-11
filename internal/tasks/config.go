@@ -99,7 +99,38 @@ func loadConfigAtRoot(root string) (Config, error) {
 }
 
 func unmarshalConfig(body []byte, cfg *Config) error {
-	return yaml.Unmarshal(body, cfg)
+	if err := yaml.Unmarshal(body, cfg); err != nil {
+		return err
+	}
+	// Some boards describe states as lanes. Explicit state lists retain
+	// precedence when both formats are present.
+	var board struct {
+		States     *[]string `json:"states"`
+		DoneStates *[]string `json:"done_states"`
+		Lanes      []struct {
+			Path     string `json:"path"`
+			Terminal bool   `json:"terminal"`
+		} `json:"lanes"`
+	}
+	if err := yaml.Unmarshal(body, &board); err != nil {
+		return err
+	}
+	if len(board.Lanes) > 0 && board.States == nil {
+		cfg.States = nil
+		if board.DoneStates == nil {
+			cfg.DoneStates = []string{}
+		}
+		for _, lane := range board.Lanes {
+			if lane.Path == "" {
+				return fmt.Errorf("board lane is missing its path")
+			}
+			cfg.States = append(cfg.States, lane.Path)
+			if lane.Terminal && board.DoneStates == nil {
+				cfg.DoneStates = append(cfg.DoneStates, lane.Path)
+			}
+		}
+	}
+	return nil
 }
 
 func normalizeConfig(cfg *Config) {
@@ -110,7 +141,7 @@ func normalizeConfig(cfg *Config) {
 	if len(cfg.States) == 0 {
 		cfg.States = defaults.States
 	}
-	if len(cfg.DoneStates) == 0 {
+	if cfg.DoneStates == nil {
 		cfg.DoneStates = defaults.DoneStates
 	}
 	if len(cfg.AnnotationMarkers) == 0 {
@@ -128,7 +159,7 @@ func normalizeConfig(cfg *Config) {
 }
 
 func findRepoRoot(start string, cfg Config) (string, string, error) {
-	current, err := filepath.Abs(start)
+	current, err := canonicalDirectory(start)
 	if err != nil {
 		return "", "", err
 	}
@@ -160,6 +191,27 @@ func findRepoRoot(start string, cfg Config) (string, string, error) {
 		boundary = fmt.Sprintf("Git worktree boundary is %s", gitRoot)
 	}
 	return "", "", fmt.Errorf("no Patchboard board found from %s (%s); searched for %s or %s; run patchboard init or select a repository with -C PATH", start, boundary, filepath.Join(cfg.TaskRoot, "board.yml"), cfg.TaskRoot)
+}
+
+// Resolve the starting directory before walking its parents so discovery and
+// traversal use the linked project's board and Git boundary.
+func canonicalDirectory(start string) (string, error) {
+	abs, err := filepath.Abs(start)
+	if err != nil {
+		return "", err
+	}
+	resolved, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return "", fmt.Errorf("resolve directory %s: %w", abs, err)
+	}
+	info, err := os.Stat(resolved)
+	if err != nil {
+		return "", err
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("%s is not a directory", abs)
+	}
+	return resolved, nil
 }
 
 func boardAtRoot(root string, cfg Config) (string, bool, error) {
@@ -198,7 +250,7 @@ func findGitRoot(start string) (string, error) {
 // ResolveInitRoot chooses the default initialization target. Existing boards
 // remain valid outside Git; new non-Git boards require an explicit force.
 func ResolveInitRoot(start string, force bool) (string, error) {
-	abs, err := filepath.Abs(start)
+	abs, err := canonicalDirectory(start)
 	if err != nil {
 		return "", err
 	}

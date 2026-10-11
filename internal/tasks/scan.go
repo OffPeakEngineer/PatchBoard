@@ -52,6 +52,12 @@ func scanTasks(taskRoot string, cfg Config) ([]Task, error) {
 			return nil
 		}
 		if entry.IsDir() {
+			if path == filepath.Join(taskRoot, "templates") && !slices.Contains(cfg.States, "templates") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !entry.Type().IsRegular() {
 			return nil
 		}
 		if filepath.Ext(path) != ".md" {
@@ -134,6 +140,11 @@ func scanTodos(repoRoot string, cfg Config) ([]Annotation, error) {
 			return nil
 		}
 
+		// WalkDir does not follow symlinks. Do not open them as files either:
+		// they may point at directories, outside the project, or nowhere.
+		if !entry.Type().IsRegular() {
+			return nil
+		}
 		fileRefs, err := scanFileTodos(path, pattern)
 		if err != nil {
 			return err
@@ -182,6 +193,11 @@ func scanFileTodos(path string, pattern *regexp.Regexp) ([]Annotation, error) {
 		return nil, err
 	}
 	if bytes.Contains(prefix[:n], []byte{0}) {
+		return nil, nil
+	}
+	// Exported snapshots embed task text, including example annotations.
+	// Counting that copied text would make exporting change lint results.
+	if bytes.Contains(prefix[:n], []byte(`name="generator" content="PatchBoard summary"`)) {
 		return nil, nil
 	}
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
@@ -288,7 +304,7 @@ func isFenceLine(line string) bool {
 // resolveRepoRoot makes Patchboard work well as a submodule or standalone
 // checkout inside a larger repo by finding the nearest ancestor with tasks/.
 func resolveRepoRoot(start string, cfg Config) (string, error) {
-	current, err := filepath.Abs(start)
+	current, err := canonicalDirectory(start)
 	if err != nil {
 		return "", err
 	}

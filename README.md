@@ -93,6 +93,18 @@ directory. CI also publishes a read-only, single-file snapshot of this board
 to [GitHub Pages](https://offpeakengineer.github.io/patchboard/) and GitLab Pages,
 with task contents included.
 
+Export the board directly with the standalone binary:
+
+```bash
+patchboard summary --type=html
+patchboard summary --type=yaml
+patchboard summary --type=json
+patchboard summary --type=csv
+```
+
+Exports default to `summary.<type>` in the project root. Use `--output PATH`
+for another destination. HTML includes the full task text and works offline.
+
 See [Getting Started](docs/getting-started.md) for installation, repository
 selection, troubleshooting, development commands, and a fuller first-board
 walkthrough.

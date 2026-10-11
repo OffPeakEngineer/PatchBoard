@@ -26,12 +26,19 @@ test:
   script:
     - go test -race ./...
     - go vet ./...
-    - go run ./cmd/patchboard lint
+    - go build -o .cache/bin/patchboard ./cmd/patchboard
+    - ./.cache/bin/patchboard lint
+  artifacts:
+    paths: [.cache/bin/patchboard]
+    expire_in: 1 week
 
 board:
   stage: test
   image: node:current-bookworm
   cache: []
+  needs:
+    - job: test
+      artifacts: true
   script:
     - node --version && npm --version
     - npm ci
@@ -45,9 +52,8 @@ board:
           npx commitlint --from "$CI_COMMIT_BEFORE_SHA" --to "$CI_COMMIT_SHA" --verbose
         fi
       fi
-    - npx playwright install --with-deps chromium
     - npm test
-    - npm run build:pages
+    - ./.cache/bin/patchboard summary --type=html --output public/index.html
   artifacts:
     paths: [public/]
     expire_in: 1 week

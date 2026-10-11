@@ -41,6 +41,38 @@ patchboard list ready
 patchboard list --json 2_doing
 ```
 
+### `patchboard summary`
+
+Export the task board to a file using the standalone PatchBoard binary:
+
+```bash
+patchboard summary --type=yaml
+patchboard summary --type=json
+patchboard summary --type=csv
+patchboard summary --type=html
+patchboard -C ../project summary --type=html --output public/index.html
+```
+
+The default format is YAML. Without `--output` (or `-o`), the command writes
+`summary.yaml`, `summary.json`, `summary.csv`, or `summary.html` in the resolved
+project root. An explicit output path is relative to the current working
+directory, including when `-C` selects another project. Parent output folders
+are created as needed, and subsequent exports replace the previous snapshot.
+
+YAML and JSON share a schema with `task_root`, `total_tasks`, and ordered
+`states`. Each state includes its name, count, and tasks with `id`, `title`,
+`state`, and repository-relative `path`. Empty configured states are included.
+CSV contains those four task fields as columns, with one row per task.
+
+HTML is a single offline, read-only board with inline styles and full Markdown
+task text. Card links jump to task text embedded in the document. No Node.js,
+browser, network access, or initialized `kanban.html` is required to export.
+
+All formats include completed tasks and tasks in unconfigured state folders;
+templates are excluded. Summary exports inspect the board itself and do not
+scan code annotations or require lint to pass. Task Markdown, `board.yml`, and
+the editable `kanban.html` cannot be used as output destinations.
+
 ### `patchboard todos`
 
 List code annotations recognized across the repository.

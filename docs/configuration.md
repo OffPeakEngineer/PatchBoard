@@ -50,6 +50,37 @@ ignore_dirs:
 The default annotation markers are listed in [Code Annotations](annotations.md).
 
 When a field is absent or empty, PatchBoard fills it from the built-in defaults.
+An explicitly empty `done_states: []` keeps every state nonterminal.
+
+## Lane Configuration Compatibility
+
+Boards can also define columns with `lanes`, using each lane's `path` as its
+state folder and `terminal: true` to mark completed or rejected work:
+
+```yaml
+lanes:
+  - id: anti-feature
+    path: -1_anti-feature
+    terminal: true
+  - id: todo
+    path: 1_todo
+  - id: doing
+    path: 2_doing
+  - id: done
+    path: 5_done
+    terminal: true
+```
+
+Lane order controls display order. Explicit `states` take precedence over
+`lanes`; explicit `done_states` override the terminal flags. With lane
+configuration, no terminal flags means no completed states. The `done` command
+recognizes numbered done folders such as `5_done` before falling back to other
+terminal states.
+
+`tasks/templates/` holds reusable starters and is excluded from task scanning
+unless `templates` is explicitly configured as a state. Lane configuration does
+not enable filename lint; `filename.pattern` is only enforced when
+`filename.enabled: true` is set, and must then be a regular expression.
 
 ## Filename Rules
 

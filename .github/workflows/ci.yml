@@ -43,10 +43,10 @@ jobs:
           fi
       - run: go test -race ./...
       - run: go vet ./...
-      - run: go run ./cmd/patchboard lint
-      - run: npx playwright install --with-deps chromium
+      - run: go build -o .cache/bin/patchboard ./cmd/patchboard
+      - run: ./.cache/bin/patchboard lint
       - run: npm test
-      - run: npm run build:pages
+      - run: ./.cache/bin/patchboard summary --type=html --output public/index.html
       - uses: actions/upload-pages-artifact@v5
         with:
           path: public

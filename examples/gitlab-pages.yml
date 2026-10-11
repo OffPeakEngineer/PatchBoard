@@ -3,13 +3,13 @@
 # Uses standard build/deploy stages; see README if your pipeline customizes them.
 patchboard-build:
   stage: build
-  image: node:current-bookworm
+  image: golang:1.25
   # Do not inherit an application's setup, caches, or build artifacts.
   inherit:
     default: false
   dependencies: []
   variables:
-    PATCHBOARD_REF: "097f0d865eec8c7e0151efd270132b5cf4f95a06"
+    PATCHBOARD_REF: main
     TASK_DIRECTORY: tasks
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -21,15 +21,15 @@ patchboard-build:
     - git -C .patchboard-tools remote add origin https://github.com/OffPeakEngineer/PatchBoard.git
     - git -C .patchboard-tools fetch --depth=1 origin "$PATCHBOARD_REF"
     - git -C .patchboard-tools checkout --detach FETCH_HEAD
-    - (cd .patchboard-tools && npm ci && npx playwright install --with-deps chromium)
-    - node .patchboard-tools/scripts/export-board.mjs "$TASK_DIRECTORY" public/index.html
+    - go -C .patchboard-tools build -o patchboard ./cmd/patchboard
+    - ./.patchboard-tools/patchboard -C "$TASK_DIRECTORY" summary --type=html --output public/index.html
   artifacts:
     paths: [public/]
     expire_in: 1 week
 
 patchboard-pages:
   stage: deploy
-  image: node:current-bookworm
+  image: golang:1.25
   inherit:
     default: false
   resource_group: pages

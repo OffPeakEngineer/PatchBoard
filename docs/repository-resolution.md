@@ -31,6 +31,12 @@ error. PatchBoard does not guess which explicit value the user intended.
 Explicit paths are resolved to absolute paths before board discovery. The
 executable's own path is never considered.
 
+The starting directory must exist. Symlinks in it are resolved before searching
+parent directories, so a linked project uses its own board and Git boundary.
+For example, `patchboard -C ./infrastructure/tasks status` works when
+`infrastructure` is a symlink to another project. Symlinks encountered within
+the selected project are skipped during task and annotation scanning.
+
 ## Automatic Discovery Inside Git
 
 When the starting directory belongs to a Git worktree, PatchBoard searches from

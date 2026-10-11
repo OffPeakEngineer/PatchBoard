@@ -131,6 +131,13 @@ func runInvocation(inv cliInvocation) {
 			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
 			os.Exit(2)
 		}
+	case "summary":
+		result, err := tasks.ExportSummary(inv.repoRoot, tasks.SummaryOptions{Type: inv.exportType, Output: inv.output})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
+			os.Exit(2)
+		}
+		fmt.Printf("Exported %d tasks to %s\n", result.Tasks, result.Path)
 	case "list":
 		if err := runList(listOptions{repoRoot: inv.repoRoot, state: inv.state, json: inv.json}); err != nil {
 			fmt.Fprintf(os.Stderr, "patchboard: %v\n", err)
@@ -491,6 +498,11 @@ func doneState(cfg tasks.Config) string {
 		}
 	}
 	for _, state := range cfg.DoneStates {
+		if strings.HasSuffix(state, "_done") && isState(cfg.States, state) {
+			return state
+		}
+	}
+	for _, state := range cfg.DoneStates {
 		if isState(cfg.States, state) {
 			return state
 		}
@@ -508,5 +520,5 @@ func isState(states []string, value string) bool {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "Usage: patchboard [status|create|move|start|done|doctor|fix|undo|init|list|lint|todos] [args]")
+	fmt.Fprintln(os.Stderr, "Usage: patchboard [status|summary|create|move|start|done|doctor|fix|undo|init|list|lint|todos] [args]")
 }

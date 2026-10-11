@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 env:
-  # Update this pin when upgrading the exporter and your board template.
-  PATCHBOARD_REF: 097f0d865eec8c7e0151efd270132b5cf4f95a06
+  # A commit or release containing the built-in summary command can also be used.
+  PATCHBOARD_REF: main
   TASK_DIRECTORY: tasks
 
 jobs:
@@ -29,19 +29,15 @@ jobs:
           ref: ${{ env.PATCHBOARD_REF }}
           path: .patchboard-tools
           persist-credentials: false
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-go@v7
         with:
-          node-version: current
-          check-latest: true
-          cache: npm
-          cache-dependency-path: .patchboard-tools/package-lock.json
-      - name: Install exporter and Chromium
+          go-version-file: .patchboard-tools/go.mod
+          cache-dependency-path: .patchboard-tools/go.sum
+      - name: Build PatchBoard
         working-directory: .patchboard-tools
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
+        run: go build -o patchboard ./cmd/patchboard
       - name: Render this project's board
-        run: node .patchboard-tools/scripts/export-board.mjs "$TASK_DIRECTORY" public/index.html
+        run: ./.patchboard-tools/patchboard -C "$TASK_DIRECTORY" summary --type=html --output public/index.html
       - uses: actions/upload-pages-artifact@v5
         with:
           path: public

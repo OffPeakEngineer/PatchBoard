@@ -22,6 +22,8 @@ type cliInvocation struct {
 	apply        bool
 	force        bool
 	short        bool
+	exportType   string
+	output       string
 }
 
 func parseCLI(args []string) (cliInvocation, error) {
@@ -90,6 +92,12 @@ func parseCLI(args []string) (cliInvocation, error) {
 	status.Bool(&inv.json, "", "json", "Emit JSON")
 	status.Bool(&inv.short, "s", "short", "Omit repository context")
 	status.AddPositionalValue(&legacyRepo, "repo-root", 1, false, "Legacy repository path")
+
+	summary := add("summary", "Export a board summary as YAML, JSON, CSV, or HTML")
+	inv.exportType = "yaml"
+	summary.String(&inv.exportType, "", "type", "Export format: yaml, json, csv, html")
+	summary.String(&inv.output, "o", "output", "Output path (default: summary.<type> in the repository root)")
+	summary.AddPositionalValue(&legacyRepo, "repo-root", 1, false, "Repository path")
 
 	list := add("list", "List tasks by workflow state")
 	list.Bool(&inv.json, "", "json", "Emit JSON")

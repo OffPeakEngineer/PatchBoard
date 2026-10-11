@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -16,6 +17,47 @@ func TestParseCLIDefaultsToStatusInCurrentRepo(t *testing.T) {
 	}
 	if opts.command != "status" || opts.repoRoot != "." {
 		t.Fatalf("unexpected options: %#v", opts)
+	}
+}
+
+func TestSummaryCLIExportsRequestedFormat(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "tasks", "2_doing"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "tasks", "2_doing", "example.md"), []byte("# Example\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, format := range []string{"yaml", "json", "csv", "html"} {
+		output := filepath.Join(root, "out", "board."+format)
+		result := runCLIProcess(t, "summary", "--type="+format, "-C", root, "--output", output)
+		if result.code != 0 || result.stderr != "" || !strings.Contains(result.stdout, "Exported 1 tasks to ") {
+			t.Fatalf("summary %s failed: %#v", format, result)
+		}
+		if info, err := os.Stat(output); err != nil || info.Size() == 0 {
+			t.Fatalf("summary output missing: %v", err)
+		}
+	}
+	result := runCLIProcess(t, "summary", "-C", root)
+	if result.code != 0 {
+		t.Fatalf("default summary failed: %#v", result)
+	}
+	if _, err := os.Stat(filepath.Join(root, "summary.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	invalid := runCLIProcess(t, "summary", "--type=pdf", "-C", root)
+	if invalid.code != 2 || !strings.Contains(invalid.stderr, "unsupported summary type") {
+		t.Fatalf("unexpected invalid-format result: %#v", invalid)
+	}
+}
+
+func TestDoneStatePrefersNumberedDoneLaneOverAntiFeature(t *testing.T) {
+	cfg := tasks.Config{
+		States:     []string{"-1_anti-feature", "1_todo", "2_doing", "5_done"},
+		DoneStates: []string{"-1_anti-feature", "5_done"},
+	}
+	if state := doneState(cfg); state != "5_done" {
+		t.Fatalf("done state = %q, want 5_done", state)
 	}
 }
 
